@@ -256,3 +256,13 @@ export function Section({ title, right, children }: { title: string; right?: Rea
     </View>
   );
 }
+
+/** Label on the left, number on the right. */
+export function StatRow({ label, value, strong }: { label: string; value: number; strong?: boolean }) {
+  return (
+    <Row style={{ justifyContent: 'space-between' }}>
+      <Text muted={!strong}>{label}</Text>
+      <Text variant={strong ? 'heading' : 'body'}>{value}</Text>
+    </Row>
+  );
+}

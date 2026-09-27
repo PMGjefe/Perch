@@ -156,12 +156,23 @@ export async function deleteList(id: string): Promise<void> {
   fail(error);
 }
 
+/** Insert the new item set first, then delete whatever else the list held, so a failed insert never empties the list. */
 export async function replaceListItems(listId: string, items: Pick<ListItem, 'species_code' | 'sighting_id' | 'note'>[]): Promise<void> {
-  const { error } = await supabase.from('list_items').delete().eq('list_id', listId);
-  fail(error);
-  if (!items.length) return;
-  const { error: e2 } = await supabase.from('list_items').insert(items.map((it, position) => ({ ...it, list_id: listId, position })));
+  let keep: string[] = [];
+  if (items.length) {
+    const { data, error } = await supabase
+      .from('list_items')
+      .insert(items.map((it, position) => ({ ...it, list_id: listId, position: position + 100000 }))) // above any old position
+      .select('id');
+    fail(error);
+    keep = (data ?? []).map((r: { id: string }) => r.id);
+  }
+  let del = supabase.from('list_items').delete().eq('list_id', listId);
+  if (keep.length) del = del.not('id', 'in', `(${keep.join(',')})`);
+  const { error: e2 } = await del;
   fail(e2);
+  // Normalise positions now that the old rows are gone.
+  await Promise.all(keep.map((id, position) => supabase.from('list_items').update({ position }).eq('id', id)));
 }
 
 export async function isFollowingList(userId: string, listId: string): Promise<boolean> {

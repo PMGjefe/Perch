@@ -13,6 +13,8 @@ WebBrowser.maybeCompleteAuthSession();
 
 interface AuthState {
   session: Session | null;
+  /** Id of the most recent signed-in user; survives the render after sign-out. */
+  lastUserId: string;
   profile: Profile | null;
   loading: boolean;
   signInWithPassword: (email: string, password: string) => Promise<void>;
@@ -28,6 +30,7 @@ const AuthContext = createContext<AuthState | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
+  const [lastUserId, setLastUserId] = useState('');
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -41,13 +44,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     supabase.auth.getSession().then(async ({ data }) => {
       if (!mounted) return;
       setSession(data.session);
-      if (data.session) await loadProfile(data.session.user.id);
+      if (data.session) {
+        setLastUserId(data.session.user.id);
+        await loadProfile(data.session.user.id);
+      }
       setLoading(false);
     });
     const { data: sub } = supabase.auth.onAuthStateChange((_event, next) => {
       setSession(next);
-      if (next) loadProfile(next.user.id);
-      else setProfile(null);
+      if (next) {
+        setLastUserId(next.user.id);
+        loadProfile(next.user.id);
+      } else setProfile(null);
     });
     return () => {
       mounted = false;
@@ -131,8 +139,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const value = useMemo(
-    () => ({ session, profile, loading, signInWithPassword, signUpWithPassword, signInWithApple, signInWithGoogle, signOut, refreshProfile, updateProfile }),
-    [session, profile, loading, signInWithPassword, signUpWithPassword, signInWithApple, signInWithGoogle, signOut, refreshProfile, updateProfile],
+    () => ({ session, lastUserId, profile, loading, signInWithPassword, signUpWithPassword, signInWithApple, signInWithGoogle, signOut, refreshProfile, updateProfile }),
+    [session, lastUserId, profile, loading, signInWithPassword, signUpWithPassword, signInWithApple, signInWithGoogle, signOut, refreshProfile, updateProfile],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -144,11 +152,13 @@ export function useAuth() {
   return ctx;
 }
 
-/** The current user id, or throws. Use in screens that are only reachable when signed in. */
+/**
+ * The current user id. Screens behind the auth gate can call this freely: during the render right
+ * after sign-out (before the gate redirects) it returns the previous id instead of throwing.
+ */
 export function useUserId() {
-  const { session } = useAuth();
-  if (!session) throw new Error('Not signed in');
-  return session.user.id;
+  const { session, lastUserId } = useAuth();
+  return session?.user.id ?? lastUserId;
 }
 
 function parseAuthParams(url: string): Record<string, string> {

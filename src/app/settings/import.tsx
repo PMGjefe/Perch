@@ -6,7 +6,7 @@ import { Stack, useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import { Alert, View } from 'react-native';
 
-import { BottomInset, Button, Card, Chip, Row, Screen, Text } from '@/components/ui';
+import { BottomInset, Button, Card, Chip, Row, Screen, StatRow, Text } from '@/components/ui';
 import { useUserId } from '@/lib/auth';
 import { importCsv, type ImportResult } from '@/lib/csv';
 import * as db from '@/lib/db';
@@ -91,14 +91,14 @@ export default function ImportScreen() {
             </Text>
             <Chip label={result.source === 'ebird' ? 'eBird' : 'Merlin'} />
           </Row>
-          <Stat label="Sightings recognised" value={result.rows.length} />
-          <Stat label="New to your diary" value={fresh.length} strong />
-          {alreadyHave ? <Stat label="Already in your diary (skipped)" value={alreadyHave} /> : null}
-          {result.duplicatesInFile ? <Stat label="Duplicate rows in file" value={result.duplicatesInFile} /> : null}
-          {result.skippedNoDate ? <Stat label="Rows without a usable date" value={result.skippedNoDate} /> : null}
+          <StatRow label="Sightings recognised" value={result.rows.length} />
+          <StatRow label="New to your diary" value={fresh.length} strong />
+          {alreadyHave ? <StatRow label="Already in your diary (skipped)" value={alreadyHave} /> : null}
+          {result.duplicatesInFile ? <StatRow label="Duplicate rows in file" value={result.duplicatesInFile} /> : null}
+          {result.skippedNoDate ? <StatRow label="Rows without a usable date" value={result.skippedNoDate} /> : null}
           {result.unmatched.length ? (
             <View style={{ gap: 4 }}>
-              <Stat label="Names not in the taxonomy (skipped)" value={result.unmatched.length} />
+              <StatRow label="Names not in the taxonomy (skipped)" value={result.unmatched.length} />
               <Text variant="caption" faint numberOfLines={3}>
                 {result.unmatched.slice(0, 8).join(', ')}
                 {result.unmatched.length > 8 ? '…' : ''}
@@ -130,14 +130,5 @@ export default function ImportScreen() {
       {result ? <Button title={fresh.length ? `Import ${fresh.length} sightings` : 'Nothing new to import'} onPress={run} disabled={!fresh.length} loading={busy && !!result} icon="download-outline" /> : null}
       <BottomInset />
     </Screen>
-  );
-}
-
-function Stat({ label, value, strong }: { label: string; value: number; strong?: boolean }) {
-  return (
-    <Row style={{ justifyContent: 'space-between' }}>
-      <Text muted={!strong}>{label}</Text>
-      <Text variant={strong ? 'heading' : 'body'}>{value}</Text>
-    </Row>
   );
 }

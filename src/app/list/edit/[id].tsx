@@ -1,13 +1,12 @@
-import { Ionicons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { Alert, FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, Switch, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, Switch, View } from 'react-native';
 import ReorderableList, { type ReorderableListRenderItemInfo, type ReorderableListReorderEvent, reorderItems } from 'react-native-reorderable-list';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DraggableItemCard, useReorderablePan } from '@/components/ReorderableItems';
+import { SightingPickerModal } from '@/components/SightingPickerModal';
 import { SpeciesPicker } from '@/components/SpeciesPicker';
-import { BottomInset, Button, Chip, Divider, IconButton, Input, Loading, Row, Text } from '@/components/ui';
+import { BottomInset, Button, Chip, Input, Loading, Row, Text } from '@/components/ui';
 import { useAsync } from '@/hooks/useAsync';
 import { useUserId } from '@/lib/auth';
 import * as db from '@/lib/db';
@@ -173,56 +172,5 @@ export default function EditList() {
       <SpeciesPicker visible={speciesOpen} onClose={() => setSpeciesOpen(false)} onSelect={(s) => setItems((prev) => [...prev, { key: `${Date.now()}`, species_code: s.code, sighting_id: null, note: '' }])} />
       <SightingPickerModal visible={sightingOpen} userId={userId} onClose={() => setSightingOpen(false)} onSelect={(sid) => setItems((prev) => [...prev, { key: `${Date.now()}`, species_code: null, sighting_id: sid, note: '' }])} />
     </KeyboardAvoidingView>
-  );
-}
-
-function SightingPickerModal({ visible, userId, onClose, onSelect }: { visible: boolean; userId: string; onClose: () => void; onSelect: (id: string) => void }) {
-  const { colors } = useTheme();
-  const insets = useSafeAreaInsets();
-  const [q, setQ] = useState('');
-  const all = db.listSightings(userId).filter((s) => !s.dirty || db.getMeta(`synced:${s.id}`));
-  const rows = q ? all.filter((s) => (speciesByCode(s.species_code)?.common ?? '').toLowerCase().includes(q.toLowerCase()) || (s.place_name ?? '').toLowerCase().includes(q.toLowerCase())) : all;
-  return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose} presentationStyle="pageSheet">
-      <View style={{ flex: 1, backgroundColor: colors.bg, paddingTop: insets.top ? spacing.md : spacing.lg }}>
-        <Row style={{ paddingHorizontal: spacing.md }}>
-          <View style={{ flex: 1 }}>
-            <Input value={q} onChangeText={setQ} placeholder="Filter your sightings" autoFocus />
-          </View>
-          <IconButton name="close" onPress={onClose} />
-        </Row>
-        <Text variant="caption" muted style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm }}>
-          Only synced sightings can be added to a list.
-        </Text>
-        <FlatList
-          data={rows}
-          keyExtractor={(s) => s.id}
-          ItemSeparatorComponent={Divider}
-          keyboardShouldPersistTaps="handled"
-          renderItem={({ item }) => (
-            <Pressable
-              onPress={() => {
-                onSelect(item.id);
-                onClose();
-              }}
-              style={({ pressed }) => ({ paddingHorizontal: spacing.lg, paddingVertical: 12, backgroundColor: pressed ? colors.surfaceAlt : 'transparent', flexDirection: 'row', alignItems: 'center', gap: spacing.md })}
-            >
-              <Ionicons name="eye-outline" size={18} color={colors.textMuted} />
-              <View style={{ flex: 1 }}>
-                <Text variant="subheading">{speciesByCode(item.species_code)?.common}</Text>
-                <Text variant="caption" muted>
-                  {[item.place_name, formatDate(item.observed_at)].filter(Boolean).join(' · ')}
-                </Text>
-              </View>
-            </Pressable>
-          )}
-          ListEmptyComponent={
-            <Text muted style={{ textAlign: 'center', padding: spacing.xl }}>
-              No sightings to add yet.
-            </Text>
-          }
-        />
-      </View>
-    </Modal>
   );
 }

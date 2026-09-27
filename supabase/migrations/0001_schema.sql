@@ -127,7 +127,8 @@ begin
 end $$;
 
 create trigger profiles_updated_at before update on public.profiles for each row execute function public.set_updated_at();
-create trigger sightings_updated_at before update on public.sightings for each row execute function public.set_updated_at();
+-- Stamped on insert as well so the incremental pull watermark uses server time, not device clocks.
+create trigger sightings_updated_at before insert or update on public.sightings for each row execute function public.set_updated_at();
 create trigger lists_updated_at before update on public.lists for each row execute function public.set_updated_at();
 
 -- Create a profile row for every new auth user. Username comes from metadata or is derived from the email.

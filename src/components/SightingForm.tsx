@@ -9,6 +9,7 @@ import { LocationField } from '@/components/LocationField';
 import { PhotoField, type PickedPhoto } from '@/components/PhotoField';
 import { SpeciesPicker } from '@/components/SpeciesPicker';
 import { BottomInset, Button, Chip, Input, Row, Text } from '@/components/ui';
+import { useLocalQuery } from '@/hooks/useLocalSightings';
 import * as db from '@/lib/db';
 import { getCurrentLocation, type LatLng, reverseGeocode } from '@/lib/geo';
 import { photoUrl } from '@/lib/supabase';
@@ -46,7 +47,7 @@ export function SightingForm({ userId, existing, onSaved, resetKey }: Props) {
   const [saving, setSaving] = useState(false);
   const touchedWhen = useRef(!!existing);
   const touchedWhere = useRef(!!existing);
-  const recent = db.listSightings(userId).slice(0, 40).map((s) => s.species_code).filter((c, i, a) => a.indexOf(c) === i).slice(0, 8);
+  const recent = useLocalQuery(() => db.recentSpecies(userId), [userId]);
 
   // New sighting: auto-fill GPS once.
   useEffect(() => {
@@ -87,6 +88,8 @@ export function SightingForm({ userId, existing, onSaved, resetKey }: Props) {
       if (photoChanged) {
         localPhoto = photo && !photo.startsWith('http') ? await persistPhoto(photo, id) : null;
         photoPath = photo && photo.startsWith('http') ? existing?.photo_path ?? null : null; // cleared or replaced: re-upload on sync
+        // Photo cleared: make sure the old storage object goes away too (a replacement overwrites the same path).
+        if (!photo && existing?.photo_path) db.queuePhotoRemoval(existing.photo_path);
       }
       const row = db.saveSighting({
         id,

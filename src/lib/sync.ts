@@ -60,6 +60,9 @@ export function syncNow(userId: string): Promise<SyncResult> {
   return inFlight;
 }
 
+const PAGE = 1000; // PostgREST max_rows in supabase/config.toml
+const PUSH_CHUNK = 200;
+
 async function run(userId: string): Promise<SyncResult> {
   if (!(await isOnline())) return { pushed: 0, pulled: 0, skipped: true };
   let pushed = 0;
@@ -67,73 +70,120 @@ async function run(userId: string): Promise<SyncResult> {
   try {
     // ---- push (one failure must not block the rest)
     const failures: string[] = [];
-    for (const row of db.dirtyRows(userId)) {
+    const dirty = db.dirtyRows(userId);
+    const deletes = dirty.filter((r) => r.deleted);
+    const withPhoto = dirty.filter((r) => !r.deleted && r.local_photo_uri && !r.photo_path);
+    const plain = dirty.filter((r) => !r.deleted && !(r.local_photo_uri && !r.photo_path));
+
+    for (const row of deletes) {
       try {
-        if (row.deleted) {
-          const { error } = await supabase.from('sightings').delete().eq('id', row.id);
-          if (error) throw error;
-          if (row.photo_path) await supabase.storage.from(PHOTO_BUCKET).remove([row.photo_path]);
-          db.removeRow(row.id);
-          pushed++;
-          continue;
-        }
-        let photoPath = row.photo_path;
-        if (row.local_photo_uri && !photoPath) {
-          photoPath = await uploadPhoto(userId, row.id, row.local_photo_uri);
-        }
-        const payload: Sighting = {
-          id: row.id,
-          user_id: userId,
-          species_code: row.species_code,
-          observed_at: row.observed_at,
-          lat: row.lat,
-          lng: row.lng,
-          place_name: row.place_name,
-          photo_path: photoPath,
-          note: row.note,
-          visibility: row.visibility,
-          sensitive: row.sensitive,
-          source: row.source,
-          source_ref: row.source_ref,
-          created_at: row.created_at,
-          updated_at: row.updated_at,
-        };
-        const { error } = await supabase.from('sightings').upsert(payload, { onConflict: 'id' });
-        if (error) {
-          // Imported row that already exists server-side (same species/day/place): drop the local copy.
-          if (error.code === '23505' && row.source !== 'app') {
-            db.removeRow(row.id);
-            continue;
-          }
-          throw error;
-        }
-        db.markSynced(row.id, { photo_path: photoPath });
+        const { error } = await supabase.from('sightings').delete().eq('id', row.id);
+        if (error) throw error;
+        if (row.photo_path) db.queuePhotoRemoval(row.photo_path);
+        db.removeRow(row.id);
         pushed++;
       } catch (e) {
-        failures.push(e instanceof Error ? e.message : String(e));
+        failures.push(errMsg(e));
       }
     }
 
-    // ---- pull (everything since last pull, plus an id sweep for deletions)
-    const since = db.getMeta(`last_pull:${userId}`);
-    let q = supabase.from('sightings').select('*').eq('user_id', userId).order('updated_at', { ascending: true }).limit(2000);
-    if (since) q = q.gt('updated_at', since);
-    const { data, error } = await q;
-    if (error) throw error;
-    const rows = (data ?? []) as Sighting[];
-    if (rows.length) {
-      db.applyServerRows(rows);
-      db.setMeta(`last_pull:${userId}`, rows[rows.length - 1].updated_at);
-      pulled = rows.length;
+    // Rows needing a photo upload go one at a time; everything else in chunks.
+    for (const row of withPhoto) {
+      try {
+        const photoPath = await uploadPhoto(userId, row.id, row.local_photo_uri!);
+        const { error } = await supabase.from('sightings').upsert(toPayload(row, userId, photoPath), { onConflict: 'id' });
+        if (error) throw error;
+        db.markSynced(row.id, { photo_path: photoPath });
+        pushed++;
+      } catch (e) {
+        failures.push(errMsg(e));
+      }
     }
-    const { data: ids, error: idErr } = await supabase.from('sightings').select('id').eq('user_id', userId);
-    if (idErr) throw idErr;
-    db.pruneMissing(userId, new Set((ids ?? []).map((r: { id: string }) => r.id)));
+    for (let i = 0; i < plain.length; i += PUSH_CHUNK) {
+      const chunk = plain.slice(i, i + PUSH_CHUNK);
+      const { error } = await supabase.from('sightings').upsert(chunk.map((r) => toPayload(r, userId, r.photo_path)), { onConflict: 'id' });
+      if (!error) {
+        db.markManySynced(chunk.map((r) => r.id));
+        pushed += chunk.length;
+        continue;
+      }
+      // A chunk failed: retry row by row so one bad row does not hold the rest hostage.
+      for (const row of chunk) {
+        const { error: rowErr } = await supabase.from('sightings').upsert(toPayload(row, userId, row.photo_path), { onConflict: 'id' });
+        if (!rowErr) {
+          db.markSynced(row.id);
+          pushed++;
+        } else if (rowErr.code === '23505' && row.source !== 'app') {
+          // Imported row that already exists server-side (same species/day/place): drop the local copy.
+          db.removeRow(row.id);
+        } else {
+          failures.push(rowErr.message);
+        }
+      }
+    }
+
+    // Storage objects for cleared or replaced photos.
+    for (const path of db.pendingPhotoRemovals()) {
+      const { error } = await supabase.storage.from(PHOTO_BUCKET).remove([path]);
+      if (!error) db.clearPhotoRemoval(path);
+    }
+
+    // ---- pull: everything changed since the watermark (server-stamped updated_at), paged
+    const since = db.getMeta(`last_pull:${userId}`);
+    let from = 0;
+    for (;;) {
+      let q = supabase.from('sightings').select('*').eq('user_id', userId).order('updated_at', { ascending: true }).order('id').range(from, from + PAGE - 1);
+      if (since) q = q.gte('updated_at', since); // gte: rows sharing the boundary timestamp are re-applied harmlessly
+      const { data, error } = await q;
+      if (error) throw error;
+      const rows = (data ?? []) as Sighting[];
+      if (rows.length) {
+        db.applyServerRows(rows);
+        db.setMeta(`last_pull:${userId}`, rows[rows.length - 1].updated_at);
+        pulled += rows.length;
+      }
+      if (rows.length < PAGE) break;
+      from += PAGE;
+    }
+
+    // ---- id sweep for rows deleted elsewhere, paged so nothing beyond the first page is mistaken for deleted
+    const serverIds = new Set<string>();
+    for (let start = 0; ; start += PAGE) {
+      const { data, error } = await supabase.from('sightings').select('id').eq('user_id', userId).order('id').range(start, start + PAGE - 1);
+      if (error) throw error;
+      for (const r of (data ?? []) as { id: string }[]) serverIds.add(r.id);
+      if ((data ?? []).length < PAGE) break;
+    }
+    db.pruneMissing(userId, serverIds);
     db.setMeta(`last_sync_at:${userId}`, new Date().toISOString());
     return { pushed, pulled, skipped: false, error: failures.length ? `${failures.length} change(s) failed: ${failures[0]}` : undefined };
   } catch (e) {
-    return { pushed, pulled, skipped: false, error: e instanceof Error ? e.message : String(e) };
+    return { pushed, pulled, skipped: false, error: errMsg(e) };
   }
+}
+
+function errMsg(e: unknown): string {
+  return e instanceof Error ? e.message : typeof e === 'object' && e && 'message' in e ? String((e as { message: unknown }).message) : String(e);
+}
+
+function toPayload(row: db.LocalSighting, userId: string, photoPath: string | null): Sighting {
+  return {
+    id: row.id,
+    user_id: userId,
+    species_code: row.species_code,
+    observed_at: row.observed_at,
+    lat: row.lat,
+    lng: row.lng,
+    place_name: row.place_name,
+    photo_path: photoPath,
+    note: row.note,
+    visibility: row.visibility,
+    sensitive: row.sensitive,
+    source: row.source,
+    source_ref: row.source_ref,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  };
 }
 
 async function uploadPhoto(userId: string, sightingId: string, uri: string): Promise<string> {
@@ -148,6 +198,7 @@ async function uploadPhoto(userId: string, sightingId: string, uri: string): Pro
 export function useSync(userId: string | null) {
   const { syncing, lastError, lastSyncAt } = useSyncExternalStore(subscribeStatus, getStatus, getStatus);
   const version = db.useDbVersion();
+  const localVersion = db.useLocalWriteVersion();
   // eslint-disable-next-line react-hooks/exhaustive-deps -- `version` is the change signal for the local store
   const pending = useMemo(() => (userId ? db.pendingCount(userId) : 0), [userId, version]);
 
@@ -167,12 +218,12 @@ export function useSync(userId: string | null) {
     };
   }, [sync]);
 
-  // Debounced sync after any local write.
+  // Debounced sync after a local write (rows applied from the server do not count, or syncing would never stop).
   useEffect(() => {
-    if (version === 0) return;
+    if (localVersion === 0) return;
     const t = setTimeout(sync, 800);
     return () => clearTimeout(t);
-  }, [version, sync]);
+  }, [localVersion, sync]);
 
   return { syncing, pending, lastError, lastSyncAt, sync };
 }
