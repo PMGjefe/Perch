@@ -60,6 +60,8 @@ function Root() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="sighting/[id]" options={{ title: '' }} />
         <Stack.Screen name="sighting/edit/[id]" options={{ title: 'Edit sighting', presentation: 'modal' }} />
+        <Stack.Screen name="list/[id]" options={{ title: '' }} />
+        <Stack.Screen name="list/edit/[id]" options={{ presentation: 'modal' }} />
       </Stack>
     </>
   );
