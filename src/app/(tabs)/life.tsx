@@ -1,15 +1,15 @@
-import { Image } from 'expo-image';
 import { Link } from 'expo-router';
 import React, { useState } from 'react';
 import { FlatList, Pressable, View } from 'react-native';
 
 import { Filters } from '@/components/Filters';
+import { Photo } from '@/components/Photo';
 import { Empty, Text } from '@/components/ui';
 import { useLocalQuery } from '@/hooks/useLocalSightings';
+import { usePrefetchPhotoUrls } from '@/lib/photos';
 import { useUserId } from '@/lib/auth';
 import * as db from '@/lib/db';
 import { formatDate } from '@/lib/format';
-import { photoUrl } from '@/lib/supabase';
 import { speciesByCode } from '@/lib/taxonomy';
 import { radius, spacing, useTheme } from '@/lib/theme';
 
@@ -21,6 +21,7 @@ export default function LifeListScreen() {
   const years = useLocalQuery(() => db.years(userId), [userId]);
   const places = useLocalQuery(() => db.places(userId), [userId]);
   const entries = useLocalQuery(() => db.lifeList(userId, { year, place }), [userId, year, place]);
+  usePrefetchPhotoUrls(entries.map((e) => e.photo));
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -45,20 +46,21 @@ export default function LifeListScreen() {
         }
         renderItem={({ item, index }) => {
           const sp = speciesByCode(item.species_code);
-          const uri = item.photo ? (item.photo.startsWith('file:') ? item.photo : photoUrl(item.photo)) : null;
           return (
             <Link href={{ pathname: '/species/[code]', params: { code: item.species_code } }} asChild>
               <Pressable style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.lg, paddingVertical: 10, backgroundColor: pressed ? colors.surfaceAlt : 'transparent' })}>
                 <Text variant="caption" faint style={{ width: 28, textAlign: 'right' }}>
                   {entries.length - index}
                 </Text>
-                {uri ? (
-                  <Image source={{ uri }} style={{ width: 52, height: 52, borderRadius: radius.md, backgroundColor: colors.surfaceAlt }} contentFit="cover" />
-                ) : (
-                  <View style={{ width: 52, height: 52, borderRadius: radius.md, backgroundColor: colors.accentSoft, alignItems: 'center', justifyContent: 'center' }}>
-                    <Text style={{ color: colors.accent, fontWeight: '700' }}>{sp?.common.charAt(0)}</Text>
-                  </View>
-                )}
+                <Photo
+                  path={item.photo}
+                  style={{ width: 52, height: 52, borderRadius: radius.md }}
+                  fallback={
+                    <View style={{ width: 52, height: 52, borderRadius: radius.md, backgroundColor: colors.accentSoft, alignItems: 'center', justifyContent: 'center' }}>
+                      <Text style={{ color: colors.accent, fontWeight: '700' }}>{sp?.common.charAt(0)}</Text>
+                    </View>
+                  }
+                />
                 <View style={{ flex: 1 }}>
                   <Text variant="subheading" numberOfLines={1}>
                     {sp?.common ?? item.species_code}

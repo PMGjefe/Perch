@@ -12,6 +12,7 @@ import { useLocalQuery, useLocalSightings } from '@/hooks/useLocalSightings';
 import { useAuth, useUserId } from '@/lib/auth';
 import * as db from '@/lib/db';
 import { haversineM } from '@/lib/geo';
+import { usePrefetchPhotoUrls } from '@/lib/photos';
 import { formatDate } from '@/lib/format';
 import { spacing, useTheme } from '@/lib/theme';
 
@@ -28,6 +29,7 @@ export default function DiaryScreen() {
   const sightings = useLocalSightings(userId, filter);
   const years = useLocalQuery(() => db.years(userId), [userId]);
   const places = useLocalQuery(() => db.places(userId), [userId]);
+  usePrefetchPhotoUrls(sightings.filter((s) => !s.local_photo_uri).map((s) => s.photo_path));
 
   // Preview how others see pins near home.
   const home = profile?.hide_home && profile.home_lat != null && profile.home_lng != null ? { lat: profile.home_lat, lng: profile.home_lng } : null;

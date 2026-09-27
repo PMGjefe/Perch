@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useSyncExternalStore } from 'react';
 import { AppState } from 'react-native';
 
 import * as db from '@/lib/db';
+import { invalidatePhotoUrl } from '@/lib/photos';
 import { PHOTO_BUCKET, supabase } from '@/lib/supabase';
 import type { Sighting } from '@/types/db';
 
@@ -191,6 +192,7 @@ async function uploadPhoto(userId: string, sightingId: string, uri: string): Pro
   const bytes = await new File(uri).arrayBuffer();
   const { error } = await supabase.storage.from(PHOTO_BUCKET).upload(path, bytes, { contentType: 'image/jpeg', upsert: true });
   if (error) throw error;
+  invalidatePhotoUrl(path);
   return path;
 }
 

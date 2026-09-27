@@ -6,6 +6,7 @@ import { ListCard } from '@/components/ListCard';
 import { SightingCard } from '@/components/SightingCard';
 import { Button, Empty, Loading, Text } from '@/components/ui';
 import { useUserId } from '@/lib/auth';
+import { signPhotoUrls } from '@/lib/photos';
 import { fetchEngagement, fetchFeed, fetchProfiles, setLike } from '@/lib/social';
 import { spacing, useTheme } from '@/lib/theme';
 import type { Engagement, FeedItem, PublicProfile } from '@/types/db';
@@ -21,10 +22,11 @@ interface Page {
 async function loadPage(before: string): Promise<Page> {
   const items = await fetchFeed(before, PAGE);
   const [profiles, sightingEng, listEng] = await Promise.all([
+    signPhotoUrls(items.map((i) => (i.kind === 'sighting' ? i.payload.photo_path : null))).then(() => null),
     fetchProfiles(items.map((i) => i.payload.user_id)),
     fetchEngagement('sighting', items.filter((i) => i.kind === 'sighting').map((i) => i.payload.id)),
     fetchEngagement('list', items.filter((i) => i.kind === 'list').map((i) => i.payload.id)),
-  ]);
+  ]).then(([, p, s, l]) => [p, s, l] as const);
   return { items, profiles, engagement: new Map([...sightingEng, ...listEng]) };
 }
 

@@ -45,8 +45,9 @@ Views (security definer, RLS-equivalent filtering baked in):
 Functions: `feed(before, limit)` returns followed users' public sightings and lists
 in reverse chronological order (no ranking), `like_counts`, `comment_counts`.
 
-Storage: bucket `sighting-photos`, path `<user_id>/<sighting_id>.jpg`. Owner can
-write; anyone can read (paths are unguessable uuids).
+Storage: private bucket `sighting-photos`, path `<user_id>/<sighting_id>.jpg`; readable by
+the owner or anyone who can see the sighting via `public_sightings`; loaded through signed
+URLs. Public `avatars` bucket for profile pictures.
 
 ## Screens (expo-router, `src/app`)
 

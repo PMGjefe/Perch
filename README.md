@@ -113,6 +113,7 @@ npm run typecheck     # tsc --noEmit
 npm run lint          # expo lint (eslint-config-expo)
 npm run check         # both
 npm run build:taxonomy   # regenerate assets/taxonomy/species.json + 0002 migration from scripts/ebird-taxonomy-v2025.csv
+npm test              # jest unit tests (importer, taxonomy search, EXIF, formatting, photo cache)
 npm run test:db       # apply migrations + seed to a local Postgres and run RLS assertions
 ```
 
@@ -136,6 +137,10 @@ which
 
 Owners always see their own exact data. Home coordinates live on `profiles`, which is
 only readable by its owner; everyone else reads `public_profiles`.
+
+Photos follow the same rules: the storage policy on `sighting-photos` only serves an object
+to its owner or to someone for whom the sighting appears in `public_sightings`, so making a
+sighting private also hides its photo. The app fetches them through signed URLs.
 
 ## Offline
 
@@ -162,8 +167,6 @@ AsyncStorage. Dev tooling: `eslint` + `eslint-config-expo`.
 
 ## Known limits of the MVP
 
-- Photos are stored in a public bucket under unguessable ids; a private sighting's
-  photo is still fetchable by anyone who has its URL.
 - Sightings cannot be dated in the future; a photo whose camera clock is ahead is set to now.
 - Reordering a list is long-press-and-drag (with "Move up"/"Move down" screen-reader actions);
   the web build shows the date read-only since the picker is native-only.

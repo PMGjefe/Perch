@@ -9,6 +9,7 @@ import { SightingsMap } from '@/components/SightingsMap';
 import { Button, Chip, Empty, Loading, Row, Text } from '@/components/ui';
 import { useAsync } from '@/hooks/useAsync';
 import { useUserId } from '@/lib/auth';
+import { signPhotoUrls } from '@/lib/photos';
 import { formatDate } from '@/lib/format';
 import { fetchLists, fetchProfile, fetchProfileStats, fetchUserLifeList, fetchUserSightings, setFollow } from '@/lib/social';
 import { speciesByCode } from '@/lib/taxonomy';
@@ -26,6 +27,7 @@ export default function UserProfile() {
   const { data, loading, reload } = useAsync(async () => {
     const [profile, stats, sightings, life, lists] = await Promise.all([fetchProfile(id), fetchProfileStats(id), fetchUserSightings(id), fetchUserLifeList(id), fetchLists(id)]);
     setFollowing(stats.is_followed_by_me);
+    await signPhotoUrls(sightings.map((s) => s.photo_path));
     return { profile, stats, sightings, life, lists };
   }, [id]);
 

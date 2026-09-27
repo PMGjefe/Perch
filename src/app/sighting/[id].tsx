@@ -1,11 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
 import { Link, Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, Pressable, View } from 'react-native';
 import MapView, { Circle, Marker } from 'react-native-maps';
 
 import { Comments } from '@/components/Comments';
+import { Photo } from '@/components/Photo';
 import { Avatar, BottomInset, Button, Empty, IconButton, Loading, Row, Screen, Text } from '@/components/ui';
 import { useAsync } from '@/hooks/useAsync';
 import { useLocalSighting } from '@/hooks/useLocalSightings';
@@ -13,7 +13,6 @@ import { useUserId } from '@/lib/auth';
 import * as db from '@/lib/db';
 import { formatDateTime } from '@/lib/format';
 import { fetchEngagement, fetchProfile, fetchPublicSighting, setLike } from '@/lib/social';
-import { photoUrl } from '@/lib/supabase';
 import { speciesByCode } from '@/lib/taxonomy';
 import { radius, spacing, useTheme } from '@/lib/theme';
 import type { Engagement, PublicSighting } from '@/types/db';
@@ -75,7 +74,6 @@ export default function SightingDetail() {
   }
 
   const sp = speciesByCode(sighting.species_code);
-  const uri = sighting.local_photo_uri ?? photoUrl(sighting.photo_path);
   const hasPin = sighting.lat != null && sighting.lng != null;
 
   return (
@@ -94,7 +92,7 @@ export default function SightingDetail() {
         }}
       />
       <Screen scroll padded={false} style={{ gap: spacing.lg, paddingBottom: spacing.xl }}>
-        {uri ? <Image source={{ uri }} style={{ width: '100%', aspectRatio: 4 / 3, backgroundColor: colors.surfaceAlt }} contentFit="cover" /> : null}
+        <Photo path={sighting.photo_path} localUri={sighting.local_photo_uri} style={{ width: '100%', aspectRatio: 4 / 3 }} />
         <View style={{ paddingHorizontal: spacing.lg, gap: spacing.lg }}>
           <View style={{ gap: spacing.xs }}>
             <Link href={{ pathname: '/species/[code]', params: { code: sighting.species_code } }} asChild>

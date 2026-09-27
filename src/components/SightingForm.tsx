@@ -7,12 +7,12 @@ import { Alert, Pressable, Switch, View } from 'react-native';
 import { DateTimeField } from '@/components/DateTimeField';
 import { LocationField } from '@/components/LocationField';
 import { PhotoField, type PickedPhoto } from '@/components/PhotoField';
+import { usePhotoUrl } from '@/lib/photos';
 import { SpeciesPicker } from '@/components/SpeciesPicker';
 import { BottomInset, Button, Chip, Input, Row, Text } from '@/components/ui';
 import { useLocalQuery } from '@/hooks/useLocalSightings';
 import * as db from '@/lib/db';
 import { getCurrentLocation, type LatLng, reverseGeocode } from '@/lib/geo';
-import { photoUrl } from '@/lib/supabase';
 import { speciesByCode, type SpeciesEntry } from '@/lib/taxonomy';
 import { radius, spacing, useTheme } from '@/lib/theme';
 import type { Visibility } from '@/types/db';
@@ -38,8 +38,13 @@ export function SightingForm({ userId, existing, onSaved, resetKey }: Props) {
   const [when, setWhen] = useState<Date>(existing ? new Date(existing.observed_at) : new Date());
   const [where, setWhere] = useState<LatLng | null>(existing?.lat != null && existing.lng != null ? { lat: existing.lat, lng: existing.lng } : null);
   const [placeName, setPlaceName] = useState(existing?.place_name ?? '');
-  const [photo, setPhoto] = useState<string | null>(existing?.local_photo_uri ?? photoUrl(existing?.photo_path) ?? null);
+  // Either a local file picked in this session, the existing remote photo, or nothing.
+  const [photo, setPhoto] = useState<{ kind: 'local'; uri: string } | { kind: 'remote'; path: string } | null>(
+    existing?.local_photo_uri ? { kind: 'local', uri: existing.local_photo_uri } : existing?.photo_path ? { kind: 'remote', path: existing.photo_path } : null,
+  );
   const [photoChanged, setPhotoChanged] = useState(false);
+  const remoteUrl = usePhotoUrl(photo?.kind === 'remote' ? photo.path : null);
+  const photoPreview = photo?.kind === 'local' ? photo.uri : photo?.kind === 'remote' ? remoteUrl : null;
   const [note, setNote] = useState(existing?.note ?? '');
   const [visibility, setVisibility] = useState<Visibility>(existing?.visibility ?? 'public');
   const [sensitive, setSensitive] = useState(existing?.sensitive ?? false);
@@ -67,7 +72,7 @@ export function SightingForm({ userId, existing, onSaved, resetKey }: Props) {
   }, [existing, resetKey]);
 
   const onPhoto = (p: PickedPhoto | null) => {
-    setPhoto(p?.uri ?? null);
+    setPhoto(p ? { kind: 'local', uri: p.uri } : null);
     setPhotoChanged(true);
     if (!p) return;
     // Prefer the photo's own metadata unless the user already changed the fields.
@@ -86,8 +91,8 @@ export function SightingForm({ userId, existing, onSaved, resetKey }: Props) {
       let localPhoto = existing?.local_photo_uri ?? null;
       let photoPath = existing?.photo_path ?? null;
       if (photoChanged) {
-        localPhoto = photo && !photo.startsWith('http') ? await persistPhoto(photo, id) : null;
-        photoPath = photo && photo.startsWith('http') ? existing?.photo_path ?? null : null; // cleared or replaced: re-upload on sync
+        localPhoto = photo?.kind === 'local' ? await persistPhoto(photo.uri, id) : null;
+        photoPath = photo?.kind === 'remote' ? photo.path : null; // cleared or replaced: re-upload on sync
         // Photo cleared: make sure the old storage object goes away too (a replacement overwrites the same path).
         if (!photo && existing?.photo_path) db.queuePhotoRemoval(existing.photo_path);
       }
@@ -150,7 +155,7 @@ export function SightingForm({ userId, existing, onSaved, resetKey }: Props) {
       </Pressable>
       <SpeciesPicker visible={pickerOpen} onClose={() => setPickerOpen(false)} onSelect={setSpecies} suggestions={recent} />
 
-      <PhotoField uri={photo} onChange={onPhoto} />
+      <PhotoField uri={photoPreview} onChange={onPhoto} />
 
       <DateTimeField
         value={when}

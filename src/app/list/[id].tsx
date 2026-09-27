@@ -1,16 +1,15 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
 import { Link, Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, Pressable, View } from 'react-native';
 
 import { Comments } from '@/components/Comments';
+import { Photo } from '@/components/Photo';
 import { Avatar, BottomInset, Button, Card, Empty, IconButton, Loading, Row, Screen, Text } from '@/components/ui';
 import { useAsync } from '@/hooks/useAsync';
 import { useUserId } from '@/lib/auth';
 import { formatDate } from '@/lib/format';
 import { deleteList, fetchEngagement, fetchList, fetchProfile, fetchSightingsByIds, isFollowingList, setLike, setListFollow } from '@/lib/social';
-import { photoUrl } from '@/lib/supabase';
 import { speciesByCode } from '@/lib/taxonomy';
 import { radius, spacing, useTheme } from '@/lib/theme';
 import type { Engagement } from '@/types/db';
@@ -142,7 +141,6 @@ export default function ListDetail() {
             const sighting = item.sighting_id ? data.sightings.get(item.sighting_id) : undefined;
             const code = item.species_code ?? sighting?.species_code;
             const sp = speciesByCode(code);
-            const uri = photoUrl(sighting?.photo_path);
             const href = item.sighting_id
               ? { pathname: '/sighting/[id]' as const, params: { id: item.sighting_id } }
               : { pathname: '/species/[code]' as const, params: { code: code ?? '' } };
@@ -153,13 +151,15 @@ export default function ListDetail() {
                     <Text variant="caption" faint style={{ width: 22, textAlign: 'right' }}>
                       {i + 1}
                     </Text>
-                    {uri ? (
-                      <Image source={{ uri }} style={{ width: 52, height: 52, borderRadius: radius.md, backgroundColor: colors.surfaceAlt }} contentFit="cover" />
-                    ) : (
-                      <View style={{ width: 52, height: 52, borderRadius: radius.md, backgroundColor: colors.accentSoft, alignItems: 'center', justifyContent: 'center' }}>
-                        <Ionicons name={item.sighting_id ? 'eye-outline' : 'leaf-outline'} size={20} color={colors.accent} />
-                      </View>
-                    )}
+                    <Photo
+                      path={sighting?.photo_path}
+                      style={{ width: 52, height: 52, borderRadius: radius.md }}
+                      fallback={
+                        <View style={{ width: 52, height: 52, borderRadius: radius.md, backgroundColor: colors.accentSoft, alignItems: 'center', justifyContent: 'center' }}>
+                          <Ionicons name={item.sighting_id ? 'eye-outline' : 'leaf-outline'} size={20} color={colors.accent} />
+                        </View>
+                      }
+                    />
                     <View style={{ flex: 1 }}>
                       <Text variant="subheading" numberOfLines={1}>
                         {sp?.common ?? (item.sighting_id && !sighting ? 'Sighting not visible' : code)}

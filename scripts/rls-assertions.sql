@@ -66,3 +66,23 @@ do $$ begin
   if (select home_lat from public.profiles where id = '11111111-1111-4111-8111-111111111111') is null then raise exception 'dev should read own home'; end if;
 end $$;
 reset role;
+
+-- storage: sighting photos follow sighting visibility
+reset role;
+insert into storage.objects (bucket_id, name, owner) values
+  ('sighting-photos', '11111111-1111-4111-8111-111111111111/c0000000-0000-4000-8000-000000000001.jpg', '11111111-1111-4111-8111-111111111111'), -- public robin
+  ('sighting-photos', '11111111-1111-4111-8111-111111111111/c0000000-0000-4000-8000-000000000027.jpg', '11111111-1111-4111-8111-111111111111'), -- private towhee
+  ('sighting-photos', '11111111-1111-4111-8111-111111111111/orphan.jpg', '11111111-1111-4111-8111-111111111111');
+update public.sightings set photo_path = '11111111-1111-4111-8111-111111111111/c0000000-0000-4000-8000-000000000001.jpg' where id = 'c0000000-0000-4000-8000-000000000001';
+update public.sightings set photo_path = '11111111-1111-4111-8111-111111111111/c0000000-0000-4000-8000-000000000027.jpg' where id = 'c0000000-0000-4000-8000-000000000027';
+set role authenticated;
+select set_config('request.jwt.claim.sub', '22222222-2222-4222-8222-222222222222', false) \gset
+do $$ begin
+  if (select count(*) from storage.objects where bucket_id = 'sighting-photos') <> 1 then raise exception 'wren should see exactly the public photo, saw %', (select count(*) from storage.objects where bucket_id = 'sighting-photos'); end if;
+  if not exists (select 1 from storage.objects where name like '%000001.jpg') then raise exception 'public photo hidden'; end if;
+end $$;
+select set_config('request.jwt.claim.sub', '11111111-1111-4111-8111-111111111111', false) \gset
+do $$ begin
+  if (select count(*) from storage.objects where bucket_id = 'sighting-photos') <> 3 then raise exception 'owner should see all own photos'; end if;
+end $$;
+reset role;

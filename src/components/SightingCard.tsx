@@ -1,12 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
 import { Link } from 'expo-router';
 import React from 'react';
 import { Pressable, View } from 'react-native';
 
+import { Photo, PhotoPlaceholder } from '@/components/Photo';
 import { Avatar, Card, Row, Text } from '@/components/ui';
 import { formatDate } from '@/lib/format';
-import { photoUrl } from '@/lib/supabase';
 import { speciesByCode } from '@/lib/taxonomy';
 import { spacing, useTheme } from '@/lib/theme';
 import type { Engagement, PublicProfile, PublicSighting, Sighting } from '@/types/db';
@@ -24,7 +23,6 @@ interface Props {
 export function SightingCard({ sighting, profile, engagement, onLike, compact, pending }: Props) {
   const { colors } = useTheme();
   const sp = speciesByCode(sighting.species_code);
-  const uri = sighting.local_photo_uri ?? photoUrl(sighting.photo_path);
   const hidden = 'location_hidden' in sighting && sighting.location_hidden;
   const fuzzed = 'location_fuzzed' in sighting && sighting.location_fuzzed;
   const place = hidden ? 'Location hidden' : fuzzed ? 'Near home' : sighting.place_name;
@@ -33,13 +31,12 @@ export function SightingCard({ sighting, profile, engagement, onLike, compact, p
     <Link href={{ pathname: '/sighting/[id]', params: { id: sighting.id } }} asChild>
       <Pressable>
         <Card>
-          {uri ? (
-            <Image source={{ uri }} style={{ width: '100%', aspectRatio: compact ? 16 / 9 : 4 / 3, backgroundColor: colors.surfaceAlt }} contentFit="cover" transition={150} />
-          ) : (
-            <View style={{ width: '100%', height: compact ? 72 : 110, backgroundColor: colors.accentSoft, alignItems: 'center', justifyContent: 'center' }}>
-              <Text style={{ fontSize: compact ? 28 : 40, color: colors.accent, fontWeight: '700', opacity: 0.8 }}>{initials(sp?.common ?? '?')}</Text>
-            </View>
-          )}
+          <Photo
+            path={sighting.photo_path}
+            localUri={sighting.local_photo_uri}
+            style={{ width: '100%', aspectRatio: compact ? 16 / 9 : 4 / 3 }}
+            fallback={<PhotoPlaceholder label={initials(sp?.common ?? '?')} height={compact ? 72 : 110} fontSize={compact ? 28 : 40} />}
+          />
           <View style={{ padding: spacing.md, gap: spacing.xs }}>
             {profile ? (
               <Row style={{ marginBottom: spacing.xs }}>

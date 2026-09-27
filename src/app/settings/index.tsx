@@ -8,7 +8,7 @@ import { LocationField } from '@/components/LocationField';
 import { Avatar, BottomInset, Button, Input, Row, Screen, Text } from '@/components/ui';
 import { useAuth, useUserId } from '@/lib/auth';
 import type { LatLng } from '@/lib/geo';
-import { PHOTO_BUCKET, photoUrl, supabase } from '@/lib/supabase';
+import { AVATAR_BUCKET, avatarPublicUrl, supabase } from '@/lib/supabase';
 import { radius, spacing, useTheme } from '@/lib/theme';
 
 const USERNAME = /^[a-z0-9_]{3,24}$/;
@@ -33,9 +33,9 @@ export default function Settings() {
     if (res.canceled || !res.assets[0]) return;
     const path = `${userId}/avatar-${Date.now()}.jpg`;
     const bytes = await new File(res.assets[0].uri).arrayBuffer();
-    const { error } = await supabase.storage.from(PHOTO_BUCKET).upload(path, bytes, { contentType: 'image/jpeg', upsert: true });
+    const { error } = await supabase.storage.from(AVATAR_BUCKET).upload(path, bytes, { contentType: 'image/jpeg', upsert: true });
     if (error) return Alert.alert('Upload failed', error.message);
-    setAvatar(photoUrl(path));
+    setAvatar(avatarPublicUrl(path));
   };
 
   const save = async () => {

@@ -33,11 +33,11 @@ AppState.addEventListener('change', (state) => {
   else supabase.auth.stopAutoRefresh();
 });
 
+/** Private bucket for sighting photos; read through signed URLs (see src/lib/photos.ts). */
 export const PHOTO_BUCKET = 'sighting-photos';
+/** Public bucket for profile pictures. */
+export const AVATAR_BUCKET = 'avatars';
 
-/** Resolve a stored photo path (or already-absolute URL) to something <Image> can load. */
-export function photoUrl(path: string | null | undefined): string | null {
-  if (!path) return null;
-  if (path.startsWith('http') || path.startsWith('file:')) return path;
-  return supabase.storage.from(PHOTO_BUCKET).getPublicUrl(path).data.publicUrl;
+export function avatarPublicUrl(path: string): string {
+  return supabase.storage.from(AVATAR_BUCKET).getPublicUrl(path).data.publicUrl;
 }
