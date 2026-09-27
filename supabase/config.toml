@@ -1,6 +1,6 @@
 # Supabase CLI config. `supabase start` runs a local stack; `supabase db reset` applies
 # migrations + seed.sql. See README for the hosted-project path.
-project_id = "flock"
+project_id = "perch"
 
 [api]
 enabled = true
@@ -27,8 +27,8 @@ file_size_limit = "10MiB"
 
 [auth]
 enabled = true
-site_url = "flock://"
-additional_redirect_urls = ["flock://auth/callback", "exp://127.0.0.1:8081/--/auth/callback"]
+site_url = "perch://"
+additional_redirect_urls = ["perch://auth/callback", "exp://127.0.0.1:8081/--/auth/callback"]
 jwt_expiry = 3600
 enable_refresh_token_rotation = true
 enable_signup = true

@@ -76,7 +76,7 @@ export default function Settings() {
         <View style={{ gap: spacing.md, backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, borderWidth: 1, borderColor: colors.border }}>
           <Text variant="heading">Home privacy</Text>
           <Text muted>
-            Set your home and Flock blurs every pin within 500 m of it. Other people see a circle roughly a kilometre wide instead of the exact spot, and the place name is dropped. You always see your own exact pins.
+            Set your home and Perch blurs every pin within 500 m of it. Other people see a circle roughly a kilometre wide instead of the exact spot, and the place name is dropped. You always see your own exact pins.
           </Text>
           <LocationField label="Home" value={home} placeName="" onChange={setHome} onPlaceNameChange={() => {}} status="No home set" hidePlaceName />
           <Row style={{ justifyContent: 'space-between' }}>

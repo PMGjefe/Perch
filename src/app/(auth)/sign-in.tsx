@@ -34,7 +34,7 @@ export default function SignIn() {
       <Screen scroll style={{ paddingTop: insets.top + spacing.xxl, gap: spacing.xl, paddingBottom: insets.bottom + spacing.xl }}>
         <View style={{ alignItems: 'center', gap: spacing.sm, marginBottom: spacing.lg }}>
           <Ionicons name="leaf" size={48} color={colors.accent} />
-          <Text variant="title">Flock</Text>
+          <Text variant="title">Perch</Text>
           <Text muted style={{ textAlign: 'center' }}>
             Your sightings, your life list, your people.
           </Text>

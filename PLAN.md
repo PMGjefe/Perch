@@ -1,7 +1,7 @@
-# Flock — MVP plan
+# Perch — MVP plan
 
 "Letterboxd for birds." Not an identification app: users identify birds elsewhere
-(Merlin, eBird) and log the sighting here. Flock is where sightings live: a diary,
+(Merlin, eBird) and log the sighting here. Perch is where sightings live: a diary,
 a life list, shareable lists, a map, and a friends' feed.
 
 ## Stack
@@ -73,7 +73,7 @@ settings/import           CSV import (eBird "My eBird Data", Merlin saved birds)
 ## Folder structure
 
 ```
-flock/
+perch/
   app.json                 Expo config (scheme, plugins, permissions)
   src/
     app/                   routes (above)

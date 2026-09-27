@@ -1,6 +1,6 @@
 -- Development seed: two accounts, 30+ sightings, lists, follows, likes and comments.
--- Dev account:    dev@flock.app    / flockdev123   (username: dev)
--- Friend account: wren@flock.app   / flockdev123   (username: wren_k)
+-- Dev account:    dev@perch.app    / perchdev123   (username: dev)
+-- Friend account: wren@perch.app   / perchdev123   (username: wren_k)
 -- Apply with `supabase db reset` (runs migrations then this file).
 --
 -- Sample photos are hotlinked from Unsplash (Unsplash License) for development only; the app
@@ -40,21 +40,21 @@ declare
   l_commute uuid := 'aaaaaaaa-0000-4000-8000-000000000001';
   l_best uuid := 'aaaaaaaa-0000-4000-8000-000000000002';
   l_wren uuid := 'aaaaaaaa-0000-4000-8000-000000000003';
-  pw text := crypt('flockdev123', gen_salt('bf'));
+  pw text := crypt('perchdev123', gen_salt('bf'));
 begin
   insert into auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
     raw_app_meta_data, raw_user_meta_data, created_at, updated_at, confirmation_token, email_change, email_change_token_new, recovery_token)
   values
-    ('00000000-0000-0000-0000-000000000000', dev, 'authenticated', 'authenticated', 'dev@flock.app', pw, now(),
+    ('00000000-0000-0000-0000-000000000000', dev, 'authenticated', 'authenticated', 'dev@perch.app', pw, now(),
      '{"provider":"email","providers":["email"]}', '{"username":"dev","full_name":"Dev Birder"}', now(), now(), '', '', '', ''),
-    ('00000000-0000-0000-0000-000000000000', wren, 'authenticated', 'authenticated', 'wren@flock.app', pw, now(),
+    ('00000000-0000-0000-0000-000000000000', wren, 'authenticated', 'authenticated', 'wren@perch.app', pw, now(),
      '{"provider":"email","providers":["email"]}', '{"username":"wren_k","full_name":"Wren Kowalski"}', now(), now(), '', '', '', '')
   on conflict (id) do nothing;
 
   insert into auth.identities (id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
   values
-    (gen_random_uuid(), dev, dev::text, jsonb_build_object('sub', dev, 'email', 'dev@flock.app', 'email_verified', true), 'email', now(), now(), now()),
-    (gen_random_uuid(), wren, wren::text, jsonb_build_object('sub', wren, 'email', 'wren@flock.app', 'email_verified', true), 'email', now(), now(), now())
+    (gen_random_uuid(), dev, dev::text, jsonb_build_object('sub', dev, 'email', 'dev@perch.app', 'email_verified', true), 'email', now(), now(), now()),
+    (gen_random_uuid(), wren, wren::text, jsonb_build_object('sub', wren, 'email', 'wren@perch.app', 'email_verified', true), 'email', now(), now(), now())
   on conflict do nothing;
 
   -- profiles are created by the auth trigger; fill in the rest

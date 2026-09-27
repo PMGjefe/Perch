@@ -1,4 +1,4 @@
--- Flock core schema
+-- Perch core schema
 create extension if not exists pgcrypto;
 
 -- ---------------------------------------------------------------- enums

@@ -1,9 +1,9 @@
 {
   "expo": {
-    "name": "Flock",
-    "slug": "flock",
+    "name": "Perch",
+    "slug": "perch",
     "version": "0.1.0",
-    "scheme": "flock",
+    "scheme": "perch",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -15,17 +15,17 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "app.flock.mobile",
+      "bundleIdentifier": "app.perch.mobile",
       "usesAppleSignIn": true,
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "Flock records where you saw a bird so it can appear in your diary and on your map.",
-        "NSCameraUsageDescription": "Flock lets you attach a photo to a sighting.",
-        "NSPhotoLibraryUsageDescription": "Flock lets you attach a photo from your library to a sighting.",
+        "NSLocationWhenInUseUsageDescription": "Perch records where you saw a bird so it can appear in your diary and on your map.",
+        "NSCameraUsageDescription": "Perch lets you attach a photo to a sighting.",
+        "NSPhotoLibraryUsageDescription": "Perch lets you attach a photo from your library to a sighting.",
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
-      "package": "app.flock.mobile",
+      "package": "app.perch.mobile",
       "adaptiveIcon": {
         "backgroundColor": "#F7F1E8",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -49,10 +49,10 @@
       "expo-sqlite",
       "expo-apple-authentication",
       "expo-web-browser",
-      ["expo-location", { "locationWhenInUsePermission": "Flock records where you saw a bird so it can appear in your diary and on your map." }],
+      ["expo-location", { "locationWhenInUsePermission": "Perch records where you saw a bird so it can appear in your diary and on your map." }],
       ["expo-image-picker", {
-        "photosPermission": "Flock lets you attach a photo from your library to a sighting.",
-        "cameraPermission": "Flock lets you attach a photo to a sighting."
+        "photosPermission": "Perch lets you attach a photo from your library to a sighting.",
+        "cameraPermission": "Perch lets you attach a photo to a sighting."
       }]
     ],
     "experiments": {

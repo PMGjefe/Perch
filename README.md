@@ -1,7 +1,7 @@
-# Flock
+# Perch
 
-Letterboxd for birds. Flock is **not** an identification app: name the bird in Merlin or
-eBird, then log it here. Flock is where your sightings live: a diary, a life list,
+Letterboxd for birds. Perch is **not** an identification app: name the bird in Merlin or
+eBird, then log it here. Perch is where your sightings live: a diary, a life list,
 shareable lists, a map, and a chronological feed of the people you follow.
 
 One codebase for iOS and Android: Expo (React Native, TypeScript, expo-router),
@@ -59,13 +59,13 @@ Supabase CLI.
 
    | account | password | username |
    |---|---|---|
-   | dev@flock.app | flockdev123 | dev |
-   | wren@flock.app | flockdev123 | wren_k |
+   | dev@perch.app | perchdev123 | dev |
+   | wren@perch.app | perchdev123 | wren_k |
 
    `dev` has 30 sightings around Seattle, two lists, and follows `wren_k` (8 sightings
    in Portland, one list), with likes and comments between them.
 4. Auth settings (Dashboard → Authentication → URL Configuration): add
-   `flock://auth/callback` and, for Expo Go, `exp://127.0.0.1:8081/--/auth/callback`
+   `perch://auth/callback` and, for Expo Go, `exp://127.0.0.1:8081/--/auth/callback`
    to the redirect URLs.
 5. Storage: the migration creates a public bucket `sighting-photos`. Nothing else to do.
 
@@ -85,7 +85,7 @@ Put the printed API URL and anon key in `.env`. On a physical device replace
   Services ID and key. The app uses the native Sign in with Apple sheet and passes the
   identity token to Supabase. iOS only; the button hides itself elsewhere.
 - Google: enable the Google provider with an OAuth web client ID/secret. The app opens
-  Supabase's hosted OAuth flow in the system browser and returns on `flock://auth/callback`.
+  Supabase's hosted OAuth flow in the system browser and returns on `perch://auth/callback`.
 
 Both work without any extra native SDKs. For the local CLI stack, fill the
 `SUPABASE_AUTH_*` values in `.env` (see `supabase/config.toml`).
@@ -117,7 +117,7 @@ npm run test:db       # apply migrations + seed to a local Postgres and run RLS 
 ```
 
 `npm run test:db` needs a plain Postgres 15+ reachable through the usual `PG*` env
-vars (it creates a `flock_test` database and a stub of Supabase's `auth`/`storage`
+vars (it creates a `perch_test` database and a stub of Supabase's `auth`/`storage`
 schemas). The assertions in `scripts/rls-assertions.sql` check that other users cannot
 read private rows, exact coordinates of sensitive or near-home sightings, or home
 locations.

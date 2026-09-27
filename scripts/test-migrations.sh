@@ -4,7 +4,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 export PGUSER=${PGUSER:-postgres}
-DB=flock_test
+DB=perch_test
 psql -v ON_ERROR_STOP=1 -q -d postgres -c "drop database if exists $DB" -c "create database $DB"
 psql -v ON_ERROR_STOP=1 -q -d $DB -f scripts/supabase-local-stub.sql
 for f in supabase/migrations/*.sql; do echo "applying $f"; psql -v ON_ERROR_STOP=1 -q -d $DB -f "$f"; done

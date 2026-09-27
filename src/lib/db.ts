@@ -11,7 +11,7 @@ export interface LocalSighting extends Sighting {
   deleted: number;
 }
 
-const db = SQLite.openDatabaseSync('flock.db');
+const db = SQLite.openDatabaseSync('perch.db');
 
 db.execSync(`
   pragma journal_mode = wal;

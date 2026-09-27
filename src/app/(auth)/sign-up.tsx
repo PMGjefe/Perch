@@ -39,7 +39,7 @@ export default function SignUp() {
       <Screen scroll style={{ paddingTop: insets.top + spacing.xxl, gap: spacing.xl, paddingBottom: insets.bottom + spacing.xl }}>
         <View style={{ gap: spacing.xs }}>
           <Text variant="title">Create account</Text>
-          <Text muted>Flock is not an ID app. Bring your sightings here after you have named the bird.</Text>
+          <Text muted>Perch is not an ID app. Bring your sightings here after you have named the bird.</Text>
         </View>
         <View style={{ gap: spacing.md }}>
           <Input label="Email" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" textContentType="emailAddress" />
