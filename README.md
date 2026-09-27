@@ -147,17 +147,25 @@ and prunes rows deleted elsewhere. Lists, feed, likes and comments require a con
 
 ## Dependencies
 
-Only Expo packages, `@supabase/supabase-js` and `react-native-maps`, plus the peers
-expo-router requires (`react-native-screens`, `react-native-safe-area-context`,
-`react-native-gesture-handler`). No state or query library. Auth session storage uses
-`expo-sqlite/kv-store` instead of AsyncStorage. Dev tooling: `eslint` +
-`eslint-config-expo`.
+Expo packages, `@supabase/supabase-js` and `react-native-maps`, plus:
+
+- `@react-native-community/datetimepicker` for the native date/time picker in the log form
+  (inline compact picker on iOS, system dialogs on Android). Bundled with Expo Go.
+- `react-native-reorderable-list` for drag-and-drop reordering in the list editor, with its
+  peers `react-native-reanimated` and `react-native-worklets` (both Expo-bundled and in Expo
+  Go; `babel-preset-expo` registers the worklets plugin automatically).
+- The peers expo-router requires (`react-native-screens`, `react-native-safe-area-context`,
+  `react-native-gesture-handler`).
+
+No state or query library. Auth session storage uses `expo-sqlite/kv-store` instead of
+AsyncStorage. Dev tooling: `eslint` + `eslint-config-expo`.
 
 ## Known limits of the MVP
 
 - Photos are stored in a public bucket under unguessable ids; a private sighting's
   photo is still fetchable by anyone who has its URL.
-- The date/time field is text entry (no native picker dependency).
-- List reordering uses up/down buttons rather than drag and drop.
+- Sightings cannot be dated in the future; a photo whose camera clock is ahead is set to now.
+- Reordering a list is long-press-and-drag (with "Move up"/"Move down" screen-reader actions);
+  the web build shows the date read-only since the picker is native-only.
 - Merlin's export format is detected from its header (common name, date, location…);
   if Merlin changes the columns, `src/lib/csv.ts` `findCol` is the place to adjust.

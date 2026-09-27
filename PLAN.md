@@ -9,6 +9,8 @@ a life list, shareable lists, a map, and a friends' feed.
 - Expo SDK 57 (React Native 0.86, TypeScript, expo-router), one codebase for iOS + Android
 - Supabase: Postgres + RLS, Auth (email/password, Apple, Google), Storage (photos)
 - react-native-maps (Apple Maps on iOS, Google Maps on Android)
+- @react-native-community/datetimepicker (native date/time entry)
+- react-native-reorderable-list + reanimated/worklets (drag-and-drop list ordering)
 - Offline: expo-sqlite is the local source of truth for the user's own sightings;
   a sync queue pushes to Supabase when online and pulls the server copy back.
 - No state library, no query library. Small hooks over the Supabase client and SQLite.
@@ -59,8 +61,8 @@ write; anyone can read (paths are unguessable uuids).
 sighting/[id]             detail: photo, species, place, likes, comments, edit/delete
 sighting/edit/[id]        edit an existing sighting
 species/[code]            species page: your sightings of it
-list/[id]                 list detail (follow, like, comment, reorder if owner)
-list/edit/[id]            create / edit a list (title, description, public, items)
+list/[id]                 list detail (follow, like, comment; owner can edit/delete)
+list/edit/[id]            create / edit a list (title, description, public, drag-to-reorder items)
 user/[id]                 another user's profile + follow button
 user/[id]/followers       followers / following
 search                    find users by username
@@ -75,7 +77,7 @@ flock/
   app.json                 Expo config (scheme, plugins, permissions)
   src/
     app/                   routes (above)
-    components/            UI: Screen, Text, Button, SightingCard, SpeciesPicker, MapPins…
+    components/            UI: Screen, Text, Button, SightingCard, SpeciesPicker, DateTimeField, ReorderableItems, SightingsMap…
     lib/
       supabase.ts          client (auth persisted in expo-sqlite kv-store)
       db.ts                local SQLite schema + queries

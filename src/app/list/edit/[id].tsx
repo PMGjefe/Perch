@@ -1,11 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { Alert, FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, Switch, View } from 'react-native';
+import ReorderableList, { type ReorderableListRenderItemInfo, type ReorderableListReorderEvent, reorderItems } from 'react-native-reorderable-list';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { DraggableItemCard, useReorderablePan } from '@/components/ReorderableItems';
 import { SpeciesPicker } from '@/components/SpeciesPicker';
-import { BottomInset, Button, Card, Chip, Divider, IconButton, Input, Loading, Row, Screen, Text } from '@/components/ui';
+import { BottomInset, Button, Chip, Divider, IconButton, Input, Loading, Row, Text } from '@/components/ui';
 import { useAsync } from '@/hooks/useAsync';
 import { useUserId } from '@/lib/auth';
 import * as db from '@/lib/db';
@@ -20,6 +22,10 @@ interface Draft {
   sighting_id: string | null;
   note: string;
 }
+
+// Keep the library's default lift (scale) but stay fully opaque so the accent border and
+// shadow of the lifted card read clearly. Module-level so the list context stays stable.
+const CELL_ANIMATIONS = { opacity: 1 };
 
 export default function EditList() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -49,12 +55,40 @@ export default function EditList() {
     return res;
   }, [id]);
 
-  const move = (i: number, dir: -1 | 1) => {
-    const j = i + dir;
-    if (j < 0 || j >= items.length) return;
-    const next = [...items];
-    [next[i], next[j]] = [next[j], next[i]];
-    setItems(next);
+  const { panGesture, onDragStart, onDragEnd } = useReorderablePan();
+
+  const handleReorder = useCallback(({ from, to }: ReorderableListReorderEvent) => {
+    setItems((prev) => reorderItems(prev, from, to));
+  }, []);
+  const changeNote = useCallback((key: string, note: string) => {
+    setItems((prev) => prev.map((x) => (x.key === key ? { ...x, note } : x)));
+  }, []);
+  const removeItem = useCallback((key: string) => {
+    setItems((prev) => prev.filter((x) => x.key !== key));
+  }, []);
+  const moveItem = useCallback((key: string, direction: -1 | 1) => {
+    setItems((prev) => {
+      const from = prev.findIndex((x) => x.key === key);
+      const to = from + direction;
+      return from < 0 || to < 0 || to >= prev.length ? prev : reorderItems(prev, from, to);
+    });
+  }, []);
+
+  const renderItem = ({ item, index }: ReorderableListRenderItemInfo<Draft>) => {
+    const local = item.sighting_id ? db.getSighting(item.sighting_id) : null;
+    const sp = speciesByCode(item.species_code ?? local?.species_code);
+    return (
+      <DraggableItemCard
+        itemKey={item.key}
+        index={index}
+        title={sp?.common ?? item.species_code ?? 'Sighting'}
+        subtitle={local ? [local.place_name, formatDate(local.observed_at)].filter(Boolean).join(' · ') : null}
+        note={item.note}
+        onChangeNote={changeNote}
+        onRemove={removeItem}
+        onMove={moveItem}
+      />
+    );
   };
 
   const save = async () => {
@@ -74,67 +108,70 @@ export default function EditList() {
 
   if (!loaded) return <Loading />;
 
+  // Header and footer are passed as elements (not component functions) so their Inputs keep
+  // identity - and focus - across re-renders while typing.
+  const header = (
+    <View style={{ gap: spacing.lg, marginBottom: spacing.sm }}>
+      <Input label="Title" value={title} onChangeText={setTitle} placeholder="Birds of my commute" maxLength={80} />
+      <Input label="Description" value={description} onChangeText={setDescription} placeholder="Optional" multiline maxLength={500} style={{ minHeight: 60, textAlignVertical: 'top' }} />
+      <Row style={{ justifyContent: 'space-between', backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md, borderWidth: 1, borderColor: colors.border }}>
+        <View style={{ flex: 1 }}>
+          <Text variant="label">Public</Text>
+          <Text variant="caption" muted>
+            Anyone can find and follow it. Private lists are only for you.
+          </Text>
+        </View>
+        <Switch value={isPublic} onValueChange={setIsPublic} trackColor={{ true: colors.accent }} />
+      </Row>
+
+      <View style={{ gap: spacing.xs }}>
+        <Row style={{ justifyContent: 'space-between' }}>
+          <Text variant="label" muted>
+            Items ({items.length})
+          </Text>
+          <Row>
+            <Chip label="Add species" icon="leaf-outline" onPress={() => setSpeciesOpen(true)} />
+            <Chip label="Add sighting" icon="eye-outline" onPress={() => setSightingOpen(true)} />
+          </Row>
+        </Row>
+        {items.length > 1 ? (
+          <Text variant="caption" faint>
+            Hold a row and drag it to reorder.
+          </Text>
+        ) : null}
+      </View>
+    </View>
+  );
+
+  const footer = (
+    <View style={{ paddingTop: spacing.sm }}>
+      <Button title={isNew ? 'Create list' : 'Save list'} onPress={save} loading={saving} />
+      <BottomInset />
+    </View>
+  );
+
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Stack.Screen options={{ title: isNew ? 'New list' : 'Edit list' }} />
-      <Screen scroll style={{ gap: spacing.lg }}>
-        <Input label="Title" value={title} onChangeText={setTitle} placeholder="Birds of my commute" maxLength={80} />
-        <Input label="Description" value={description} onChangeText={setDescription} placeholder="Optional" multiline maxLength={500} style={{ minHeight: 60, textAlignVertical: 'top' }} />
-        <Row style={{ justifyContent: 'space-between', backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md, borderWidth: 1, borderColor: colors.border }}>
-          <View style={{ flex: 1 }}>
-            <Text variant="label">Public</Text>
-            <Text variant="caption" muted>
-              Anyone can find and follow it. Private lists are only for you.
-            </Text>
-          </View>
-          <Switch value={isPublic} onValueChange={setIsPublic} trackColor={{ true: colors.accent }} />
-        </Row>
+      <ReorderableList
+        data={items}
+        keyExtractor={(it) => it.key}
+        renderItem={renderItem}
+        onReorder={handleReorder}
+        onDragStart={onDragStart}
+        onDragEnd={onDragEnd}
+        panGesture={panGesture}
+        shouldUpdateActiveItem
+        cellAnimations={CELL_ANIMATIONS}
+        ListHeaderComponent={header}
+        ListFooterComponent={footer}
+        keyboardShouldPersistTaps="handled"
+        style={{ flex: 1, backgroundColor: colors.bg }}
+        contentContainerStyle={{ padding: spacing.lg }}
+      />
 
-        <View style={{ gap: spacing.sm }}>
-          <Row style={{ justifyContent: 'space-between' }}>
-            <Text variant="label" muted>
-              Items ({items.length})
-            </Text>
-            <Row>
-              <Chip label="Add species" icon="leaf-outline" onPress={() => setSpeciesOpen(true)} />
-              <Chip label="Add sighting" icon="eye-outline" onPress={() => setSightingOpen(true)} />
-            </Row>
-          </Row>
-          {items.map((it, i) => {
-            const local = it.sighting_id ? db.getSighting(it.sighting_id) : null;
-            const sp = speciesByCode(it.species_code ?? local?.species_code);
-            return (
-              <Card key={it.key} style={{ padding: spacing.sm, gap: spacing.xs }}>
-                <Row>
-                  <Text variant="caption" faint style={{ width: 20, textAlign: 'right' }}>
-                    {i + 1}
-                  </Text>
-                  <View style={{ flex: 1 }}>
-                    <Text variant="subheading" numberOfLines={1}>
-                      {sp?.common ?? it.species_code ?? 'Sighting'}
-                    </Text>
-                    {local ? (
-                      <Text variant="caption" muted>
-                        {[local.place_name, formatDate(local.observed_at)].filter(Boolean).join(' · ')}
-                      </Text>
-                    ) : null}
-                  </View>
-                  <IconButton name="chevron-up" size={18} onPress={() => move(i, -1)} style={{ padding: 4 }} />
-                  <IconButton name="chevron-down" size={18} onPress={() => move(i, 1)} style={{ padding: 4 }} />
-                  <IconButton name="close" size={18} color={colors.danger} onPress={() => setItems(items.filter((x) => x.key !== it.key))} style={{ padding: 4 }} />
-                </Row>
-                <Input value={it.note} onChangeText={(t) => setItems(items.map((x) => (x.key === it.key ? { ...x, note: t } : x)))} placeholder="Note (optional)" maxLength={300} style={{ paddingVertical: 8, fontSize: 14 }} />
-              </Card>
-            );
-          })}
-        </View>
-
-        <Button title={isNew ? 'Create list' : 'Save list'} onPress={save} loading={saving} />
-        <BottomInset />
-      </Screen>
-
-      <SpeciesPicker visible={speciesOpen} onClose={() => setSpeciesOpen(false)} onSelect={(s) => setItems([...items, { key: `${Date.now()}`, species_code: s.code, sighting_id: null, note: '' }])} />
-      <SightingPickerModal visible={sightingOpen} userId={userId} onClose={() => setSightingOpen(false)} onSelect={(sid) => setItems([...items, { key: `${Date.now()}`, species_code: null, sighting_id: sid, note: '' }])} />
+      <SpeciesPicker visible={speciesOpen} onClose={() => setSpeciesOpen(false)} onSelect={(s) => setItems((prev) => [...prev, { key: `${Date.now()}`, species_code: s.code, sighting_id: null, note: '' }])} />
+      <SightingPickerModal visible={sightingOpen} userId={userId} onClose={() => setSightingOpen(false)} onSelect={(sid) => setItems((prev) => [...prev, { key: `${Date.now()}`, species_code: null, sighting_id: sid, note: '' }])} />
     </KeyboardAvoidingView>
   );
 }
