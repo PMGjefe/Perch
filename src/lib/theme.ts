@@ -1,5 +1,7 @@
 import { useColorScheme } from 'react-native';
 
+export { fonts } from '@/lib/fonts';
+
 // Warm, photo-forward palette. Light is cream + terracotta; dark is charcoal + ember.
 export const palettes = {
   light: {

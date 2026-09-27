@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Link, Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
+import Animated, { interpolate, useAnimatedRef, useAnimatedStyle, useScrollOffset } from 'react-native-reanimated';
 import { Alert, KeyboardAvoidingView, Platform, Pressable, View } from 'react-native';
 import MapView, { Circle, Marker } from 'react-native-maps';
 
@@ -10,11 +11,12 @@ import { Avatar, BottomInset, Button, Empty, IconButton, Loading, Row, Screen, T
 import { useAsync } from '@/hooks/useAsync';
 import { useLocalSighting } from '@/hooks/useLocalSightings';
 import { useUserId } from '@/lib/auth';
+import { haptic } from '@/lib/haptics';
 import * as db from '@/lib/db';
 import { formatDateTime } from '@/lib/format';
 import { fetchEngagement, fetchProfile, fetchPublicSighting, setLike } from '@/lib/social';
 import { speciesByCode } from '@/lib/taxonomy';
-import { radius, spacing, useTheme } from '@/lib/theme';
+import { fonts, radius, spacing, useTheme } from '@/lib/theme';
 import type { Engagement, PublicSighting } from '@/types/db';
 
 export default function SightingDetail() {
@@ -24,6 +26,13 @@ export default function SightingDetail() {
   const { colors } = useTheme();
   const local = useLocalSighting(id);
   const isOwner = !!local;
+  const scrollRef = useAnimatedRef<Animated.ScrollView>();
+  const offset = useScrollOffset(scrollRef);
+  const HERO = 320;
+  const hero = useAnimatedStyle(() => {
+    const y = offset.get();
+    return { transform: [{ translateY: interpolate(y, [-HERO, 0, HERO], [-HERO / 2, 0, HERO * 0.4]) }, { scale: interpolate(y, [-HERO, 0], [1.8, 1], 'clamp') }] };
+  });
 
   // Own sightings come from SQLite (offline); others come from the privacy-aware view.
   const remote = useAsync(async () => (local ? null : fetchPublicSighting(id)), [id, !!local]);
@@ -41,6 +50,7 @@ export default function SightingDetail() {
 
   const toggleLike = async () => {
     if (!eng) return;
+    haptic.select();
     const next = { ...eng, liked_by_me: !eng.liked_by_me, like_count: eng.like_count + (eng.liked_by_me ? -1 : 1) };
     setEng(next);
     try {
@@ -91,16 +101,18 @@ export default function SightingDetail() {
             : undefined,
         }}
       />
-      <Screen scroll padded={false} style={{ gap: spacing.lg, paddingBottom: spacing.xl }}>
-        <Photo path={sighting.photo_path} localUri={sighting.local_photo_uri} style={{ width: '100%', aspectRatio: 4 / 3 }} />
+      <Animated.ScrollView ref={scrollRef} style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={{ gap: spacing.lg, paddingBottom: spacing.xl }} scrollEventThrottle={16}>
+        {sighting.photo_path || sighting.local_photo_uri ? (
+          <Animated.View style={[{ height: HERO, overflow: 'hidden' }, hero]}>
+            <Photo path={sighting.photo_path} localUri={sighting.local_photo_uri} style={{ width: '100%', height: HERO }} />
+          </Animated.View>
+        ) : null}
         <View style={{ paddingHorizontal: spacing.lg, gap: spacing.lg }}>
           <View style={{ gap: spacing.xs }}>
             <Link href={{ pathname: '/species/[code]', params: { code: sighting.species_code } }} asChild>
               <Pressable>
                 <Text variant="title">{sp?.common ?? sighting.species_code}</Text>
-                <Text muted style={{ fontStyle: 'italic' }}>
-                  {sp?.sci}
-                </Text>
+                <Text style={{ fontFamily: fonts.displayItalic, fontSize: 17, color: colors.textMuted }}>{sp?.sci}</Text>
               </Pressable>
             </Link>
           </View>
@@ -177,7 +189,7 @@ export default function SightingDetail() {
           <Comments type="sighting" id={id} onCountChange={(d) => setEng((e) => (e ? { ...e, comment_count: e.comment_count + d } : e))} />
           <BottomInset />
         </View>
-      </Screen>
+      </Animated.ScrollView>
     </KeyboardAvoidingView>
   );
 }

@@ -106,6 +106,17 @@ npx expo run:ios       # or: npx eas-cli build --profile development
 Android maps in a development build need a Google Maps key in
 `GOOGLE_MAPS_ANDROID_API_KEY` (Expo Go ships its own).
 
+## Design
+
+- Type: Fraunces (serif) for species names, headings and big numbers; Inter for UI.
+- Motion: Reanimated everywhere it carries meaning. Cards rise in with a stagger, presses
+  squash with a spring, lists animate layout changes, the sighting hero parallaxes.
+- Haptics: logging, liking, lifting a card to reorder, and a heavy thump for a lifer.
+- The lifer moment: logging a species for the first time opens a full-screen celebration
+  with its life-list number (`src/components/LiferMoment.tsx`).
+- Glass tab bar on iOS, dark map style at night, skeletons instead of spinners.
+- Everything respects the system reduce-motion setting.
+
 ## Development
 
 ```bash
@@ -156,6 +167,8 @@ Expo packages, `@supabase/supabase-js` and `react-native-maps`, plus:
 
 - `@react-native-community/datetimepicker` for the native date/time picker in the log form
   (inline compact picker on iOS, system dialogs on Android). Bundled with Expo Go.
+- `expo-font` + `@expo-google-fonts/fraunces` and `@expo-google-fonts/inter`, `expo-haptics`,
+  `expo-blur`, `expo-linear-gradient` for type, feedback and visual polish.
 - `react-native-reorderable-list` for drag-and-drop reordering in the list editor, with its
   peers `react-native-reanimated` and `react-native-worklets` (both Expo-bundled and in Expo
   Go; `babel-preset-expo` registers the worklets plugin automatically).

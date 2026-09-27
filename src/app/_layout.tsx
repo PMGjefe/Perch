@@ -1,4 +1,4 @@
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { SplashScreen, Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SystemUI from 'expo-system-ui';
 import React, { useEffect } from 'react';
@@ -8,7 +8,10 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { SyncProvider } from '@/components/SyncProvider';
 import { Loading } from '@/components/ui';
 import { AuthProvider, useAuth } from '@/lib/auth';
-import { useTheme } from '@/lib/theme';
+import { useAppFonts } from '@/lib/fonts';
+import { fonts, useTheme } from '@/lib/theme';
+
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {
   return (
@@ -27,8 +30,13 @@ export default function RootLayout() {
 function Root() {
   const { colors, dark } = useTheme();
   const { session, loading } = useAuth();
+  const fontsReady = useAppFonts();
   const segments = useSegments();
   const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && fontsReady) SplashScreen.hideAsync().catch(() => {});
+  }, [loading, fontsReady]);
 
   useEffect(() => {
     SystemUI.setBackgroundColorAsync(colors.bg).catch(() => {});
@@ -42,7 +50,7 @@ function Root() {
     else if (session && inAuth) router.replace('/(tabs)/feed');
   }, [session, loading, segments, router]);
 
-  if (loading) return <Loading />;
+  if (loading || !fontsReady) return <Loading />;
 
   return (
     <>
@@ -52,7 +60,7 @@ function Root() {
           headerStyle: { backgroundColor: colors.bg },
           headerTintColor: colors.text,
           headerShadowVisible: false,
-          headerTitleStyle: { fontWeight: '700' },
+          headerTitleStyle: { fontFamily: fonts.semibold, fontSize: 17 },
           contentStyle: { backgroundColor: colors.bg },
         }}
       >

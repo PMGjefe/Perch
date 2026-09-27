@@ -79,7 +79,7 @@ export default function DiaryScreen() {
         keyExtractor={(s) => s.id}
         stickyHeaderIndices={[0]}
         ListHeaderComponent={header}
-        contentContainerStyle={{ paddingBottom: spacing.xxl }}
+        contentContainerStyle={{ paddingBottom: 120 }}
         renderItem={({ item, index }) => {
           const day = formatDate(item.observed_at);
           const prevDay = index > 0 ? formatDate(sightings[index - 1].observed_at) : null;
@@ -92,7 +92,7 @@ export default function DiaryScreen() {
               ) : (
                 <View style={{ height: spacing.md }} />
               )}
-              <SightingCard sighting={item} compact pending={!!item.dirty} />
+              <SightingCard index={index} sighting={item} compact pending={!!item.dirty} />
             </View>
           );
         }}

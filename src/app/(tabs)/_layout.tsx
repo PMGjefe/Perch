@@ -1,23 +1,29 @@
 import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 
-import { useTheme } from '@/lib/theme';
+import { fonts, useTheme } from '@/lib/theme';
 
 export default function TabsLayout() {
-  const { colors } = useTheme();
+  const { colors, dark } = useTheme();
+  const glass = Platform.OS === 'ios';
   return (
     <Tabs
       screenOptions={{
         headerStyle: { backgroundColor: colors.bg },
         headerShadowVisible: false,
         headerTintColor: colors.text,
-        headerTitleStyle: { fontWeight: '700', fontSize: 20 },
-        tabBarStyle: { backgroundColor: colors.tabBar, borderTopColor: colors.border },
+        headerTitleStyle: { fontFamily: fonts.display, fontSize: 24, letterSpacing: -0.3 },
+        headerTitleAlign: 'left',
+        tabBarStyle: glass
+          ? { position: 'absolute', backgroundColor: 'transparent', borderTopWidth: 0, elevation: 0 }
+          : { backgroundColor: colors.tabBar, borderTopColor: colors.border },
+        tabBarBackground: glass ? () => <BlurView tint={dark ? 'dark' : 'light'} intensity={70} style={StyleSheet.absoluteFill} /> : undefined,
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.textFaint,
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
+        tabBarLabelStyle: { fontSize: 11, fontFamily: fonts.semibold },
         sceneStyle: { backgroundColor: colors.bg },
       }}
     >
@@ -30,8 +36,23 @@ export default function TabsLayout() {
           headerShown: false,
           tabBarLabel: () => null,
           tabBarIcon: () => (
-            <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', marginTop: -18 }}>
-              <Ionicons name="add" size={32} color={colors.onAccent} />
+            <View
+              style={{
+                width: 56,
+                height: 56,
+                borderRadius: 28,
+                backgroundColor: colors.accent,
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginTop: -22,
+                shadowColor: colors.accent,
+                shadowOpacity: 0.45,
+                shadowRadius: 14,
+                shadowOffset: { width: 0, height: 6 },
+                elevation: 8,
+              }}
+            >
+              <Ionicons name="add" size={34} color={colors.onAccent} />
             </View>
           ),
         }}

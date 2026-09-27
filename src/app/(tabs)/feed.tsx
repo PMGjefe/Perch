@@ -4,8 +4,10 @@ import { FlatList, RefreshControl, View } from 'react-native';
 
 import { ListCard } from '@/components/ListCard';
 import { SightingCard } from '@/components/SightingCard';
-import { Button, Empty, Loading, Text } from '@/components/ui';
+import { FeedSkeleton } from '@/components/Skeleton';
+import { Button, Empty, Text } from '@/components/ui';
 import { useUserId } from '@/lib/auth';
+import { haptic } from '@/lib/haptics';
 import { signPhotoUrls } from '@/lib/photos';
 import { fetchEngagement, fetchFeed, fetchProfiles, setLike } from '@/lib/social';
 import { spacing, useTheme } from '@/lib/theme';
@@ -79,6 +81,7 @@ export default function FeedScreen() {
   );
 
   const toggleLike = async (type: 'sighting' | 'list', id: string) => {
+    haptic.select();
     const e = engagement.get(id) ?? { target_id: id, like_count: 0, comment_count: 0, liked_by_me: false };
     const next = { ...e, liked_by_me: !e.liked_by_me, like_count: e.like_count + (e.liked_by_me ? -1 : 1) };
     setEngagement((cur) => new Map(cur).set(id, next));
@@ -89,20 +92,20 @@ export default function FeedScreen() {
     }
   };
 
-  if (items === null && !error) return <Loading />;
+  if (items === null && !error) return <FeedSkeleton />;
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <FlatList
         data={items ?? []}
         keyExtractor={(i) => `${i.kind}:${i.payload.id}`}
-        contentContainerStyle={{ padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxl }}
+        contentContainerStyle={{ padding: spacing.lg, gap: spacing.lg, paddingBottom: 120 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.accent} />}
         onEndReached={more}
         onEndReachedThreshold={0.6}
-        renderItem={({ item }) =>
+        renderItem={({ item, index }) =>
           item.kind === 'sighting' ? (
-            <SightingCard sighting={item.payload} profile={profiles.get(item.payload.user_id)} engagement={engagement.get(item.payload.id)} onLike={() => toggleLike('sighting', item.payload.id)} />
+            <SightingCard index={index} sighting={item.payload} profile={profiles.get(item.payload.user_id)} engagement={engagement.get(item.payload.id)} onLike={() => toggleLike('sighting', item.payload.id)} />
           ) : (
             <ListCard list={item.payload} profile={profiles.get(item.payload.user_id)} engagement={engagement.get(item.payload.id)} onLike={() => toggleLike('list', item.payload.id)} />
           )

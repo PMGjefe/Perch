@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AuthProviders } from '@/components/AuthProviders';
 import { Button, Input, Screen, Text } from '@/components/ui';
 import { friendlyAuthError, useAuth } from '@/lib/auth';
-import { spacing, useTheme } from '@/lib/theme';
+import { fonts, spacing, useTheme } from '@/lib/theme';
 
 export default function SignIn() {
   const { colors } = useTheme();
@@ -33,11 +33,11 @@ export default function SignIn() {
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Screen scroll style={{ paddingTop: insets.top + spacing.xxl, gap: spacing.xl, paddingBottom: insets.bottom + spacing.xl }}>
         <View style={{ alignItems: 'center', gap: spacing.sm, marginBottom: spacing.lg }}>
-          <Ionicons name="leaf" size={48} color={colors.accent} />
-          <Text variant="title">Perch</Text>
-          <Text muted style={{ textAlign: 'center' }}>
-            Your sightings, your life list, your people.
+          <Ionicons name="leaf" size={40} color={colors.accent} />
+          <Text variant="display" style={{ fontSize: 56, lineHeight: 60 }}>
+            Perch
           </Text>
+          <Text style={{ fontFamily: fonts.displayItalic, fontSize: 19, color: colors.textMuted, textAlign: 'center' }}>Your sightings, your life list, your people.</Text>
         </View>
         <View style={{ gap: spacing.md }}>
           <Input label="Email" value={email} onChangeText={setEmail} autoCapitalize="none" autoComplete="email" keyboardType="email-address" textContentType="emailAddress" />

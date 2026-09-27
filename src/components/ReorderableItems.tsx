@@ -6,6 +6,7 @@ import { useSharedValue } from 'react-native-reanimated';
 import { useIsActive, useReorderableDrag } from 'react-native-reorderable-list';
 
 import { Card, IconButton, Input, Row, Text } from '@/components/ui';
+import { haptic } from '@/lib/haptics';
 import { spacing, useTheme } from '@/lib/theme';
 
 /**
@@ -86,6 +87,7 @@ export const DraggableItemCard = React.memo(function DraggableItemCard({ itemKey
   // would otherwise unmount a focused note input mid-edit and drop the keyboard during the animation.
   const lift = () => {
     Keyboard.dismiss();
+    haptic.lift();
     drag();
   };
   const onAccessibilityAction = (e: AccessibilityActionEvent) => {

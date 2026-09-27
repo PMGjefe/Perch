@@ -17,17 +17,21 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { radius, spacing, useTheme } from '@/lib/theme';
+import { Tap } from '@/components/motion';
+import { fonts, radius, spacing, useTheme } from '@/lib/theme';
 
-type Variant = 'title' | 'heading' | 'subheading' | 'body' | 'label' | 'caption';
+type Variant = 'display' | 'title' | 'heading' | 'subheading' | 'species' | 'body' | 'label' | 'caption';
 
+// Serif (Fraunces) carries names and numbers; Inter carries UI. No fontWeight: the family is the weight.
 const variants: Record<Variant, TextStyle> = {
-  title: { fontSize: 30, fontWeight: '700', letterSpacing: -0.5 },
-  heading: { fontSize: 22, fontWeight: '700', letterSpacing: -0.3 },
-  subheading: { fontSize: 17, fontWeight: '600' },
-  body: { fontSize: 16, lineHeight: 22 },
-  label: { fontSize: 14, fontWeight: '600' },
-  caption: { fontSize: 13 },
+  display: { fontFamily: fonts.display, fontSize: 44, lineHeight: 48, letterSpacing: -1 },
+  title: { fontFamily: fonts.display, fontSize: 32, lineHeight: 36, letterSpacing: -0.6 },
+  heading: { fontFamily: fonts.display, fontSize: 24, lineHeight: 28, letterSpacing: -0.3 },
+  subheading: { fontFamily: fonts.semibold, fontSize: 17, lineHeight: 22 },
+  species: { fontFamily: fonts.display, fontSize: 20, lineHeight: 24, letterSpacing: -0.2 },
+  body: { fontFamily: fonts.body, fontSize: 16, lineHeight: 22 },
+  label: { fontFamily: fonts.semibold, fontSize: 14, lineHeight: 18 },
+  caption: { fontFamily: fonts.body, fontSize: 13, lineHeight: 17 },
 };
 
 export function Text({
@@ -98,10 +102,11 @@ export function Button({
   const bg = kind === 'primary' ? colors.accent : kind === 'danger' ? colors.danger : kind === 'secondary' ? colors.surfaceAlt : 'transparent';
   const fg = kind === 'primary' || kind === 'danger' ? colors.onAccent : kind === 'ghost' ? colors.accent : colors.text;
   return (
-    <Pressable
+    <Tap
       {...rest}
+      scaleTo={0.96}
       disabled={disabled || loading}
-      style={({ pressed }) => [
+      style={[
         {
           backgroundColor: bg,
           paddingVertical: 13,
@@ -111,14 +116,14 @@ export function Button({
           justifyContent: 'center',
           flexDirection: 'row',
           gap: spacing.sm,
-          opacity: disabled ? 0.5 : pressed ? 0.8 : 1,
+          opacity: disabled ? 0.5 : 1,
         },
         typeof style === 'function' ? undefined : style,
       ]}
     >
       {loading ? <ActivityIndicator color={fg} /> : icon ? <Ionicons name={icon} size={18} color={fg} /> : null}
-      <RNText style={{ color: fg, fontSize: 16, fontWeight: '600' }}>{title}</RNText>
-    </Pressable>
+      <RNText style={{ color: fg, fontSize: 16, fontFamily: fonts.semibold }}>{title}</RNText>
+    </Tap>
   );
 }
 
@@ -181,22 +186,23 @@ export function Divider() {
 export function Chip({ label, active, onPress, icon }: { label: string; active?: boolean; onPress?: () => void; icon?: keyof typeof Ionicons.glyphMap }) {
   const { colors } = useTheme();
   return (
-    <Pressable
+    <Tap
       onPress={onPress}
-      style={({ pressed }) => ({
+      scaleTo={0.94}
+      feedback="select"
+      style={{
         paddingVertical: 7,
         paddingHorizontal: 14,
         borderRadius: radius.pill,
         backgroundColor: active ? colors.accent : colors.surfaceAlt,
-        opacity: pressed ? 0.7 : 1,
         flexDirection: 'row',
         alignItems: 'center',
         gap: 6,
-      })}
+      }}
     >
       {icon ? <Ionicons name={icon} size={14} color={active ? colors.onAccent : colors.textMuted} /> : null}
-      <RNText style={{ color: active ? colors.onAccent : colors.text, fontWeight: '600', fontSize: 14 }}>{label}</RNText>
-    </Pressable>
+      <RNText style={{ color: active ? colors.onAccent : colors.text, fontFamily: fonts.semibold, fontSize: 14 }}>{label}</RNText>
+    </Tap>
   );
 }
 
@@ -208,7 +214,7 @@ export function Avatar({ uri, name, size = 40 }: { uri?: string | null; name?: s
   }
   return (
     <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: colors.accentSoft, alignItems: 'center', justifyContent: 'center' }}>
-      <RNText style={{ color: colors.accent, fontWeight: '700', fontSize: size * 0.42 }}>{initial}</RNText>
+      <RNText style={{ color: colors.accent, fontFamily: fonts.displaySemi, fontSize: size * 0.46 }}>{initial}</RNText>
     </View>
   );
 }
