@@ -62,6 +62,12 @@ function Root() {
         <Stack.Screen name="sighting/edit/[id]" options={{ title: 'Edit sighting', presentation: 'modal' }} />
         <Stack.Screen name="list/[id]" options={{ title: '' }} />
         <Stack.Screen name="list/edit/[id]" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="settings/index" options={{ title: 'Profile & privacy' }} />
+        <Stack.Screen name="settings/import" options={{ title: 'Import' }} />
+        <Stack.Screen name="search" options={{ title: 'Find people' }} />
+        <Stack.Screen name="user/[id]/index" options={{ title: '' }} />
+        <Stack.Screen name="user/[id]/followers" options={{ title: '' }} />
+        <Stack.Screen name="species/[code]" options={{ title: '' }} />
       </Stack>
     </>
   );

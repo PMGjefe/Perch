@@ -14,9 +14,12 @@ interface Props {
   onChange: (p: LatLng | null) => void;
   onPlaceNameChange: (s: string) => void;
   status?: string | null;
+  /** Hide the place-name input (e.g. picking a home location). */
+  hidePlaceName?: boolean;
+  label?: string;
 }
 
-export function LocationField({ value, placeName, onChange, onPlaceNameChange, status }: Props) {
+export function LocationField({ value, placeName, onChange, onPlaceNameChange, status, hidePlaceName, label = 'Where' }: Props) {
   const { colors } = useTheme();
   const [mapOpen, setMapOpen] = useState(false);
   const [locating, setLocating] = useState(false);
@@ -27,7 +30,7 @@ export function LocationField({ value, placeName, onChange, onPlaceNameChange, s
     setLocating(false);
     if (!p) return;
     onChange(p);
-    if (!placeName) {
+    if (!placeName && !hidePlaceName) {
       const name = await reverseGeocode(p);
       if (name) onPlaceNameChange(name);
     }
@@ -36,9 +39,9 @@ export function LocationField({ value, placeName, onChange, onPlaceNameChange, s
   return (
     <View style={{ gap: spacing.sm }}>
       <Text variant="label" muted>
-        Where
+        {label}
       </Text>
-      <Input value={placeName} onChangeText={onPlaceNameChange} placeholder="Place name (park, patch, backyard)" />
+      {hidePlaceName ? null : <Input value={placeName} onChangeText={onPlaceNameChange} placeholder="Place name (park, patch, backyard)" />}
       <Row style={{ flexWrap: 'wrap' }}>
         <Chip label={locating ? 'Locating…' : 'Current location'} icon="locate" onPress={useCurrent} active={!!value && !locating} />
         <Chip label={value ? 'Adjust on map' : 'Pick on map'} icon="map-outline" onPress={() => setMapOpen(true)} />
