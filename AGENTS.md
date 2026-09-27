@@ -50,4 +50,3 @@ Docs: https://docs.expo.dev/eas/index.md
 - Lint runs the React Compiler rules: no setState inside effects, shared values via `.get()`/`.set()`.
 - Before committing: `npm run check` (typecheck + lint + jest). Schema changes: `npm run test:db`
   against a local Postgres (see README).
-- Reference `docs/` for eBird/Merlin export formats when touching `src/lib/csv.ts`.
