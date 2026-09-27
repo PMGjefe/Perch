@@ -1,10 +1,11 @@
+import { cachedPhotoUrl, invalidatePhotoUrl, isDirectUri, signPhotoUrls } from '@/lib/photos';
+
 const mockCreateSignedUrls = jest.fn();
 jest.mock('@/lib/supabase', () => ({
   PHOTO_BUCKET: 'sighting-photos',
   supabase: { storage: { from: () => ({ createSignedUrls: mockCreateSignedUrls }) } },
 }));
 
-import { cachedPhotoUrl, invalidatePhotoUrl, isDirectUri, signPhotoUrls } from '@/lib/photos';
 
 describe('photo url cache', () => {
   beforeEach(() => mockCreateSignedUrls.mockReset());
