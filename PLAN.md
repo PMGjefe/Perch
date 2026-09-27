@@ -106,3 +106,5 @@ flock/
 8. Social: follows, feed, likes, comments — commit
 9. Import (eBird, Merlin) — commit
 10. Profile + README — commit
+
+Status: all ten steps built. See README.md for setup.
