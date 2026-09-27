@@ -2,7 +2,6 @@ import { Image, type ImageProps } from 'expo-image';
 import React from 'react';
 import { View } from 'react-native';
 
-import { Text } from '@/components/ui';
 import { usePhotoUrl } from '@/lib/photos';
 import { useTheme } from '@/lib/theme';
 
@@ -23,14 +22,4 @@ export function Photo({ path, localUri, fallback, style, ...rest }: Props) {
   if (!path && !localUri) return <>{fallback ?? null}</>;
   if (!uri) return <View style={[{ backgroundColor: colors.surfaceAlt }, style]} />;
   return <Image source={{ uri }} style={[{ backgroundColor: colors.surfaceAlt }, style]} contentFit="cover" transition={150} {...rest} />;
-}
-
-/** Warm placeholder block with the species initials, used where a sighting has no photo. */
-export function PhotoPlaceholder({ label, height, fontSize = 40 }: { label: string; height: number; fontSize?: number }) {
-  const { colors } = useTheme();
-  return (
-    <View style={{ width: '100%', height, backgroundColor: colors.accentSoft, alignItems: 'center', justifyContent: 'center' }}>
-      <Text style={{ fontSize, color: colors.accent, fontWeight: '700', opacity: 0.8 }}>{label}</Text>
-    </View>
-  );
 }

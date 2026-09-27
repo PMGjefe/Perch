@@ -73,7 +73,6 @@ export default function MeScreen() {
       </Link>
       <Button title="Sign out" kind="secondary" onPress={confirmSignOut} />
       <BottomInset />
-      <View style={{ height: 80 }} />
     </Screen>
   );
 }

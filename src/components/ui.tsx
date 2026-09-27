@@ -15,8 +15,7 @@ import {
   View,
   type ViewProps,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
+import { useBottomPadding } from '@/components/TabBarInset';
 import { Tap } from '@/components/motion';
 import { fonts, radius, spacing, useTheme } from '@/lib/theme';
 
@@ -246,9 +245,10 @@ export function Loading() {
   );
 }
 
+/** Spacer that clears the home indicator and, inside the tabs, the floating tab bar. */
 export function BottomInset() {
-  const insets = useSafeAreaInsets();
-  return <View style={{ height: insets.bottom + spacing.xl }} />;
+  const pad = useBottomPadding(spacing.xl);
+  return <View style={{ height: pad }} />;
 }
 
 export function Section({ title, right, children }: { title: string; right?: React.ReactNode; children?: React.ReactNode }) {

@@ -7,6 +7,7 @@ import { Filters } from '@/components/Filters';
 import { SightingCard } from '@/components/SightingCard';
 import { SightingsMap } from '@/components/SightingsMap';
 import { useSyncState } from '@/components/SyncProvider';
+import { useBottomPadding } from '@/components/TabBarInset';
 import { Chip, Empty, Row, Text } from '@/components/ui';
 import { useLocalQuery, useLocalSightings } from '@/hooks/useLocalSightings';
 import { useAuth, useUserId } from '@/lib/auth';
@@ -18,6 +19,7 @@ import { spacing, useTheme } from '@/lib/theme';
 
 export default function DiaryScreen() {
   const userId = useUserId();
+  const bottomPad = useBottomPadding(spacing.xxl);
   const { profile } = useAuth();
   const { colors } = useTheme();
   const router = useRouter();
@@ -79,7 +81,7 @@ export default function DiaryScreen() {
         keyExtractor={(s) => s.id}
         stickyHeaderIndices={[0]}
         ListHeaderComponent={header}
-        contentContainerStyle={{ paddingBottom: 120 }}
+        contentContainerStyle={{ paddingBottom: bottomPad }}
         renderItem={({ item, index }) => {
           const day = formatDate(item.observed_at);
           const prevDay = index > 0 ? formatDate(sightings[index - 1].observed_at) : null;

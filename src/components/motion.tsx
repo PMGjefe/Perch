@@ -44,11 +44,13 @@ export function Tap({ scaleTo = 0.97, feedback = 'tap', style, onPressIn, onPres
   );
 }
 
-/** Fades and rises in; pass `index` to stagger a list. */
+/** Rows visible on first paint fade and rise in with a stagger; rows mounted later while scrolling appear instantly. */
+const STAGGER_ROWS = 8;
 export function Rise({ index = 0, children, style }: { index?: number; children: React.ReactNode; style?: StyleProp<ViewStyle> }) {
   const reduced = useReducedMotion();
+  const animate = !reduced && index < STAGGER_ROWS;
   return (
-    <Animated.View entering={reduced ? undefined : FadeInDown.delay(Math.min(index, 8) * 45).springify().damping(18).stiffness(200)} layout={layout} style={style}>
+    <Animated.View entering={animate ? FadeInDown.delay(index * 45).springify().damping(18).stiffness(200) : undefined} style={style}>
       {children}
     </Animated.View>
   );

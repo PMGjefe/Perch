@@ -1,27 +1,26 @@
-import React, { useEffect, useState } from 'react';
-import { type TextStyle } from 'react-native';
-import Animated, { Easing, runOnJS, useAnimatedReaction, useSharedValue, withTiming } from 'react-native-reanimated';
+import React, { useEffect } from 'react';
+import { TextInput, type TextStyle } from 'react-native';
+import Animated, { Easing, useAnimatedProps, useSharedValue, withTiming } from 'react-native-reanimated';
 
-import { Text } from '@/components/ui';
+import { fonts, useTheme } from '@/lib/theme';
 
-/** Animates from the previous value to the new one; serif, big. */
+Animated.addWhitelistedNativeProps({ text: true });
+const AnimatedInput = Animated.createAnimatedComponent(TextInput);
+
+/** Animates from the previous value to the new one entirely on the UI thread. Serif, big. */
 export function CountUp({ value, style }: { value: number; style?: TextStyle }) {
+  const { colors } = useTheme();
   const progress = useSharedValue(value);
-  const [shown, setShown] = useState(value);
   useEffect(() => {
     progress.set(withTiming(value, { duration: 700, easing: Easing.out(Easing.cubic) }));
   }, [value, progress]);
-  useAnimatedReaction(
-    () => Math.round(progress.get()),
-    (v, prev) => {
-      if (v !== prev) runOnJS(setShown)(v);
-    },
-  );
+  const props = useAnimatedProps(() => ({ text: String(Math.round(progress.get())), defaultValue: String(Math.round(progress.get())) }));
   return (
-    <Animated.View>
-      <Text variant="display" style={style}>
-        {shown}
-      </Text>
-    </Animated.View>
+    <AnimatedInput
+      editable={false}
+      underlineColorAndroid="transparent"
+      animatedProps={props}
+      style={[{ fontFamily: fonts.display, fontSize: 44, lineHeight: 48, letterSpacing: -1, color: colors.text, padding: 0, margin: 0 }, style]}
+    />
   );
 }

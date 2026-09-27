@@ -3,13 +3,18 @@ import { BlurView } from 'expo-blur';
 import { Tabs } from 'expo-router';
 import React from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { TabBarInsetProvider } from '@/components/TabBarInset';
 
 import { fonts, useTheme } from '@/lib/theme';
 
 export default function TabsLayout() {
   const { colors, dark } = useTheme();
   const glass = Platform.OS === 'ios';
+  const insets = useSafeAreaInsets();
   return (
+    <TabBarInsetProvider height={glass ? 49 + insets.bottom : 0}>
     <Tabs
       screenOptions={{
         headerStyle: { backgroundColor: colors.bg },
@@ -60,5 +65,6 @@ export default function TabsLayout() {
       <Tabs.Screen name="life" options={{ title: 'Life list', tabBarIcon: ({ color, size }) => <Ionicons name="list-outline" size={size} color={color} /> }} />
       <Tabs.Screen name="me" options={{ title: 'Me', tabBarIcon: ({ color, size }) => <Ionicons name="person-outline" size={size} color={color} /> }} />
     </Tabs>
+    </TabBarInsetProvider>
   );
 }

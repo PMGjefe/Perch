@@ -31,7 +31,7 @@ export default function SightingDetail() {
   const HERO = 320;
   const hero = useAnimatedStyle(() => {
     const y = offset.get();
-    return { transform: [{ translateY: interpolate(y, [-HERO, 0, HERO], [-HERO / 2, 0, HERO * 0.4]) }, { scale: interpolate(y, [-HERO, 0], [1.8, 1], 'clamp') }] };
+    return { transform: [{ translateY: interpolate(y, [-HERO, 0, HERO], [-HERO / 2, 0, HERO * 0.35], 'clamp') }, { scale: interpolate(y, [-HERO, 0], [1.8, 1], 'clamp') }] };
   });
 
   // Own sightings come from SQLite (offline); others come from the privacy-aware view.
@@ -101,11 +101,13 @@ export default function SightingDetail() {
             : undefined,
         }}
       />
-      <Animated.ScrollView ref={scrollRef} style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={{ gap: spacing.lg, paddingBottom: spacing.xl }} scrollEventThrottle={16}>
+      <Animated.ScrollView ref={scrollRef} style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={{ gap: spacing.lg, paddingBottom: spacing.xl }} scrollEventThrottle={16} keyboardShouldPersistTaps="handled" contentInsetAdjustmentBehavior="automatic">
         {sighting.photo_path || sighting.local_photo_uri ? (
-          <Animated.View style={[{ height: HERO, overflow: 'hidden' }, hero]}>
-            <Photo path={sighting.photo_path} localUri={sighting.local_photo_uri} style={{ width: '100%', height: HERO }} />
-          </Animated.View>
+          <View style={{ height: HERO, overflow: 'hidden', backgroundColor: colors.surfaceAlt }}>
+            <Animated.View style={[{ height: HERO }, hero]}>
+              <Photo path={sighting.photo_path} localUri={sighting.local_photo_uri} style={{ width: '100%', height: HERO }} />
+            </Animated.View>
+          </View>
         ) : null}
         <View style={{ paddingHorizontal: spacing.lg, gap: spacing.lg }}>
           <View style={{ gap: spacing.xs }}>

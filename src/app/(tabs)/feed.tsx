@@ -6,6 +6,7 @@ import { ListCard } from '@/components/ListCard';
 import { SightingCard } from '@/components/SightingCard';
 import { FeedSkeleton } from '@/components/Skeleton';
 import { Button, Empty, Text } from '@/components/ui';
+import { useBottomPadding } from '@/components/TabBarInset';
 import { useUserId } from '@/lib/auth';
 import { haptic } from '@/lib/haptics';
 import { signPhotoUrls } from '@/lib/photos';
@@ -34,6 +35,7 @@ async function loadPage(before: string): Promise<Page> {
 
 export default function FeedScreen() {
   const userId = useUserId();
+  const bottomPad = useBottomPadding(spacing.xxl);
   const router = useRouter();
   const { colors } = useTheme();
   const [items, setItems] = useState<FeedItem[] | null>(null);
@@ -99,7 +101,7 @@ export default function FeedScreen() {
       <FlatList
         data={items ?? []}
         keyExtractor={(i) => `${i.kind}:${i.payload.id}`}
-        contentContainerStyle={{ padding: spacing.lg, gap: spacing.lg, paddingBottom: 120 }}
+        contentContainerStyle={{ padding: spacing.lg, gap: spacing.lg, paddingBottom: bottomPad }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.accent} />}
         onEndReached={more}
         onEndReachedThreshold={0.6}

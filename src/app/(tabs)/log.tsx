@@ -33,10 +33,14 @@ export default function LogScreen() {
           onSaved={(s) => {
             setResetKey((k) => k + 1);
             // A lifer is a species with exactly one sighting: the one just saved.
+            // Only trust the local store once the first pull from the server has happened.
+            const synced = !!db.getMeta(`last_sync_at:${userId}`);
             const count = db.listSightings(userId, { speciesCode: s.species_code }).length;
-            if (count === 1) {
+            if (synced && count === 1) {
               const sp = speciesByCode(s.species_code);
-              setLifer({ species: sp?.common ?? s.species_code, scientific: sp?.sci ?? '', number: db.stats(userId).species });
+              // Life-list number = rank by first-seen date, matching the numbering on the Life tab.
+              const number = db.lifeList(userId).filter((e) => e.first_seen <= s.observed_at).length;
+              setLifer({ species: sp?.common ?? s.species_code, scientific: sp?.sci ?? '', number });
               setPendingId(s.id);
             } else {
               router.push({ pathname: '/sighting/[id]', params: { id: s.id } });

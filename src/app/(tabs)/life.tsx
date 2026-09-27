@@ -9,6 +9,7 @@ import { Photo } from '@/components/Photo';
 import { Empty, Text } from '@/components/ui';
 import { useLocalQuery } from '@/hooks/useLocalSightings';
 import { usePrefetchPhotoUrls } from '@/lib/photos';
+import { useBottomPadding } from '@/components/TabBarInset';
 import { useUserId } from '@/lib/auth';
 import * as db from '@/lib/db';
 import { formatDate, relativeTime } from '@/lib/format';
@@ -17,16 +18,17 @@ import { fonts, radius, spacing, useTheme } from '@/lib/theme';
 
 export default function LifeListScreen() {
   const userId = useUserId();
+  const bottomPad = useBottomPadding(spacing.xxl);
   const { colors } = useTheme();
   const [year, setYear] = useState<number | null>(null);
   const [place, setPlace] = useState<string | null>(null);
   const years = useLocalQuery(() => db.years(userId), [userId]);
   const places = useLocalQuery(() => db.places(userId), [userId]);
   const entries = useLocalQuery(() => db.lifeList(userId, { year, place }), [userId, year, place]);
-  const all = useLocalQuery(() => db.lifeList(userId), [userId]);
-  const thisYear = new Date().getFullYear();
-  const lifersThisYear = all.filter((e) => e.first_seen.slice(0, 4) === String(thisYear)).length;
-  const latest = all[0];
+  const unfiltered = !year && !place;
+  const thisYear = String(new Date().getFullYear());
+  const lifersThisYear = unfiltered ? entries.filter((e) => db.localDay(e.first_seen).startsWith(thisYear)).length : 0;
+  const latest = unfiltered ? entries[0] : undefined;
   usePrefetchPhotoUrls(entries.map((e) => e.photo));
 
   return (
@@ -34,7 +36,7 @@ export default function LifeListScreen() {
       <FlatList
         data={entries}
         keyExtractor={(e) => e.species_code}
-        contentContainerStyle={{ paddingBottom: 120 }}
+        contentContainerStyle={{ paddingBottom: bottomPad }}
         stickyHeaderIndices={[0]}
         ListHeaderComponent={
           <View style={{ backgroundColor: colors.bg }}>
@@ -46,9 +48,9 @@ export default function LifeListScreen() {
               <Text muted>
                 {year ? `Seen in ${year}` : 'All time'}
                 {place ? ` · ${place}` : ''}
-                {!year && !place && all.length ? ` · ${lifersThisYear} new in ${thisYear}` : ''}
+                {unfiltered && entries.length ? ` · ${lifersThisYear} new in ${thisYear}` : ''}
               </Text>
-              {!year && !place && latest ? (
+              {latest ? (
                 <Text variant="caption" faint>
                   Latest lifer: {speciesByCode(latest.species_code)?.common} · {relativeTime(latest.first_seen)}
                 </Text>

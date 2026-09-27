@@ -1,7 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect } from 'react';
 import { Modal, Pressable, useWindowDimensions, View } from 'react-native';
-import Animated, { Easing, FadeIn, FadeOut, useAnimatedStyle, useSharedValue, withDelay, withSequence, withSpring, withTiming, ZoomIn } from 'react-native-reanimated';
+import Animated, { Easing, FadeIn, useAnimatedStyle, useSharedValue, withDelay, withSequence, withSpring, withTiming, ZoomIn } from 'react-native-reanimated';
 
 import { Text } from '@/components/ui';
 import { haptic } from '@/lib/haptics';
@@ -32,9 +32,9 @@ export function LiferMoment({ lifer, onDone }: { lifer: Lifer | null; onDone: ()
   }, [lifer]);
   if (!lifer) return null;
   return (
-    <Modal transparent animationType="none" visible onRequestClose={onDone} statusBarTranslucent>
+    <Modal transparent animationType="fade" visible onRequestClose={onDone} statusBarTranslucent>
       <Pressable onPress={onDone} style={{ flex: 1 }}>
-        <Animated.View entering={FadeIn.duration(220)} exiting={FadeOut.duration(180)} style={{ flex: 1 }}>
+        <Animated.View style={{ flex: 1 }}>
           <LinearGradient colors={dark ? ['#2A1D12', '#15130F'] : ['#F6E3D0', '#F7F1E8']} style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl }}>
             <View style={{ position: 'absolute', left: width / 2, top: height / 2 - 60 }}>
               {PARTICLES.map((p, i) => (
