@@ -5,6 +5,7 @@ import React, { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { SyncProvider } from '@/components/SyncProvider';
 import { Loading } from '@/components/ui';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { useTheme } from '@/lib/theme';
@@ -14,7 +15,9 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <AuthProvider>
-          <Root />
+          <SyncProvider>
+            <Root />
+          </SyncProvider>
         </AuthProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
@@ -55,6 +58,8 @@ function Root() {
       >
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="sighting/[id]" options={{ title: '' }} />
+        <Stack.Screen name="sighting/edit/[id]" options={{ title: 'Edit sighting', presentation: 'modal' }} />
       </Stack>
     </>
   );
