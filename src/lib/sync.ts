@@ -65,41 +65,53 @@ async function run(userId: string): Promise<SyncResult> {
   let pushed = 0;
   let pulled = 0;
   try {
-    // ---- push
+    // ---- push (one failure must not block the rest)
+    const failures: string[] = [];
     for (const row of db.dirtyRows(userId)) {
-      if (row.deleted) {
-        const { error } = await supabase.from('sightings').delete().eq('id', row.id);
-        if (error) throw error;
-        if (row.photo_path) await supabase.storage.from(PHOTO_BUCKET).remove([row.photo_path]);
-        db.removeRow(row.id);
+      try {
+        if (row.deleted) {
+          const { error } = await supabase.from('sightings').delete().eq('id', row.id);
+          if (error) throw error;
+          if (row.photo_path) await supabase.storage.from(PHOTO_BUCKET).remove([row.photo_path]);
+          db.removeRow(row.id);
+          pushed++;
+          continue;
+        }
+        let photoPath = row.photo_path;
+        if (row.local_photo_uri && !photoPath) {
+          photoPath = await uploadPhoto(userId, row.id, row.local_photo_uri);
+        }
+        const payload: Sighting = {
+          id: row.id,
+          user_id: userId,
+          species_code: row.species_code,
+          observed_at: row.observed_at,
+          lat: row.lat,
+          lng: row.lng,
+          place_name: row.place_name,
+          photo_path: photoPath,
+          note: row.note,
+          visibility: row.visibility,
+          sensitive: row.sensitive,
+          source: row.source,
+          source_ref: row.source_ref,
+          created_at: row.created_at,
+          updated_at: row.updated_at,
+        };
+        const { error } = await supabase.from('sightings').upsert(payload, { onConflict: 'id' });
+        if (error) {
+          // Imported row that already exists server-side (same species/day/place): drop the local copy.
+          if (error.code === '23505' && row.source !== 'app') {
+            db.removeRow(row.id);
+            continue;
+          }
+          throw error;
+        }
+        db.markSynced(row.id, { photo_path: photoPath });
         pushed++;
-        continue;
+      } catch (e) {
+        failures.push(e instanceof Error ? e.message : String(e));
       }
-      let photoPath = row.photo_path;
-      if (row.local_photo_uri && !photoPath) {
-        photoPath = await uploadPhoto(userId, row.id, row.local_photo_uri);
-      }
-      const payload: Omit<Sighting, 'created_at'> & { created_at: string } = {
-        id: row.id,
-        user_id: userId,
-        species_code: row.species_code,
-        observed_at: row.observed_at,
-        lat: row.lat,
-        lng: row.lng,
-        place_name: row.place_name,
-        photo_path: photoPath,
-        note: row.note,
-        visibility: row.visibility,
-        sensitive: row.sensitive,
-        source: row.source,
-        source_ref: row.source_ref,
-        created_at: row.created_at,
-        updated_at: row.updated_at,
-      };
-      const { error } = await supabase.from('sightings').upsert(payload, { onConflict: 'id' });
-      if (error) throw error;
-      db.markSynced(row.id, { photo_path: photoPath });
-      pushed++;
     }
 
     // ---- pull (everything since last pull, plus an id sweep for deletions)
@@ -118,7 +130,7 @@ async function run(userId: string): Promise<SyncResult> {
     if (idErr) throw idErr;
     db.pruneMissing(userId, new Set((ids ?? []).map((r: { id: string }) => r.id)));
     db.setMeta(`last_sync_at:${userId}`, new Date().toISOString());
-    return { pushed, pulled, skipped: false };
+    return { pushed, pulled, skipped: false, error: failures.length ? `${failures.length} change(s) failed: ${failures[0]}` : undefined };
   } catch (e) {
     return { pushed, pulled, skipped: false, error: e instanceof Error ? e.message : String(e) };
   }
