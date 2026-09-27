@@ -39,3 +39,15 @@ Docs: https://docs.expo.dev/eas/index.md
 - If `ios/` and `android/` directories do not exist, they are generated (Continuous Native Generation). Never create or edit them by hand — configure native behavior in `app.json` and config plugins.
 - Expo Go only includes its bundled native modules. After adding a library with native code, the app needs a development build: `npx expo run:ios|android` locally, or `eas build --profile development`.
 - Prefer recommended Expo modules over third-party libraries, and check your available skills before adding dependencies. Docs: https://docs.expo.dev/versions/latest/index.md
+
+## Perch conventions
+
+- Design system: `src/lib/theme.ts` (colors, spacing, radius, fonts), primitives in `src/components/ui.tsx`,
+  motion in `src/components/motion.tsx` (`Tap`, `Rise`), haptics in `src/lib/haptics.ts`. Species names,
+  headings and big numbers use the Fraunces serif; UI text uses Inter. Never set `fontWeight`; pick a family.
+- Own sightings live in SQLite (`src/lib/db.ts`) and sync via `src/lib/sync.ts`; screens read local first.
+- Sighting photos are private: render through `<Photo path=…>` (signed URLs), never a public URL.
+- Lint runs the React Compiler rules: no setState inside effects, shared values via `.get()`/`.set()`.
+- Before committing: `npm run check` (typecheck + lint + jest). Schema changes: `npm run test:db`
+  against a local Postgres (see README).
+- Reference `docs/` for eBird/Merlin export formats when touching `src/lib/csv.ts`.

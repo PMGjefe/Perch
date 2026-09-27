@@ -27,12 +27,17 @@
     "android": {
       "package": "app.perch.mobile",
       "adaptiveIcon": {
-        "backgroundColor": "#F7F1E8",
+        "backgroundColor": "#C4622D",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION", "CAMERA", "READ_MEDIA_IMAGES"],
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "CAMERA",
+        "READ_MEDIA_IMAGES"
+      ],
       "config": {
         "googleMaps": {
           "apiKey": "${GOOGLE_MAPS_ANDROID_API_KEY}"
@@ -49,11 +54,19 @@
       "expo-sqlite",
       "expo-apple-authentication",
       "expo-web-browser",
-      ["expo-location", { "locationWhenInUsePermission": "Perch records where you saw a bird so it can appear in your diary and on your map." }],
-      ["expo-image-picker", {
-        "photosPermission": "Perch lets you attach a photo from your library to a sighting.",
-        "cameraPermission": "Perch lets you attach a photo to a sighting."
-      }]
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Perch records where you saw a bird so it can appear in your diary and on your map."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Perch lets you attach a photo from your library to a sighting.",
+          "cameraPermission": "Perch lets you attach a photo to a sighting."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
