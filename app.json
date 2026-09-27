@@ -1,25 +1,62 @@
 {
   "expo": {
-    "name": "flock",
+    "name": "Flock",
     "slug": "flock",
-    "version": "1.0.0",
+    "version": "0.1.0",
+    "scheme": "flock",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#F7F1E8"
+    },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": false,
+      "bundleIdentifier": "app.flock.mobile",
+      "usesAppleSignIn": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Flock records where you saw a bird so it can appear in your diary and on your map.",
+        "NSCameraUsageDescription": "Flock lets you attach a photo to a sighting.",
+        "NSPhotoLibraryUsageDescription": "Flock lets you attach a photo from your library to a sighting.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
+      "package": "app.flock.mobile",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#F7F1E8",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
+      "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION", "CAMERA", "READ_MEDIA_IMAGES"],
+      "config": {
+        "googleMaps": {
+          "apiKey": "${GOOGLE_MAPS_ANDROID_API_KEY}"
+        }
+      },
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-sqlite",
+      "expo-apple-authentication",
+      "expo-web-browser",
+      ["expo-location", { "locationWhenInUsePermission": "Flock records where you saw a bird so it can appear in your diary and on your map." }],
+      ["expo-image-picker", {
+        "photosPermission": "Flock lets you attach a photo from your library to a sighting.",
+        "cameraPermission": "Flock lets you attach a photo to a sighting."
+      }]
+    ],
+    "experiments": {
+      "typedRoutes": true
     }
   }
 }
