@@ -161,11 +161,13 @@ end $$;
 create trigger on_auth_user_created after insert on auth.users
   for each row execute function public.handle_new_user();
 
--- Photos may only live under the owner's folder.
+-- Photos may only live under the owner's storage folder (or be an absolute URL, e.g. seed data).
 create or replace function public.check_sighting_photo_path() returns trigger
 language plpgsql as $$
 begin
-  if new.photo_path is not null and position(new.user_id::text || '/' in new.photo_path) <> 1 then
+  if new.photo_path is not null
+     and position(new.user_id::text || '/' in new.photo_path) <> 1
+     and new.photo_path !~ '^https://' then
     raise exception 'photo_path must start with the owner id';
   end if;
   return new;
