@@ -1,4 +1,4 @@
-import { Link } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { FlatList, Pressable, View } from 'react-native';
 
@@ -6,7 +6,7 @@ import { CountUp } from '@/components/CountUp';
 import { Filters } from '@/components/Filters';
 import { Rise } from '@/components/motion';
 import { Photo } from '@/components/Photo';
-import { Empty, Text } from '@/components/ui';
+import { Button, Empty, Text } from '@/components/ui';
 import { useLocalQuery } from '@/hooks/useLocalSightings';
 import { usePrefetchPhotoUrls } from '@/lib/photos';
 import { useBottomPadding } from '@/components/TabBarInset';
@@ -20,6 +20,7 @@ export default function LifeListScreen() {
   const userId = useUserId();
   const bottomPad = useBottomPadding(spacing.xxl);
   const { colors } = useTheme();
+  const router = useRouter();
   const [year, setYear] = useState<number | null>(null);
   const [place, setPlace] = useState<string | null>(null);
   const years = useLocalQuery(() => db.years(userId), [userId]);
@@ -90,7 +91,14 @@ export default function LifeListScreen() {
             </Rise>
           );
         }}
-        ListEmptyComponent={<Empty icon="list-outline" title={year || place ? 'Nothing matches' : 'Your life list is empty'} body={year || place ? 'Try a different year or place.' : 'Every species you log shows up here with the date you first saw it.'} />}
+        ListEmptyComponent={
+          <Empty
+            icon="list-outline"
+            title={year || place ? 'Nothing matches' : 'Your life list is empty'}
+            body={year || place ? 'Try a different year or place.' : 'Every species you log shows up here with the date you first saw it.'}
+            action={year || place ? undefined : <Button title="Log a bird" icon="add" onPress={() => router.push('/(tabs)/log')} />}
+          />
+        }
       />
     </View>
   );

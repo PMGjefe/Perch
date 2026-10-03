@@ -7,6 +7,7 @@ import { Alert, Pressable, View } from 'react-native';
 import { DateTimeField } from '@/components/DateTimeField';
 import { LocationField } from '@/components/LocationField';
 import { PhotoField, type PickedPhoto } from '@/components/PhotoField';
+import { haptic } from '@/lib/haptics';
 import { usePhotoUrl } from '@/lib/photos';
 import { SpeciesPicker } from '@/components/SpeciesPicker';
 import { BottomInset, Button, Chip, Input, Row, SwitchRow, Text } from '@/components/ui';
@@ -123,6 +124,7 @@ export function SightingForm({ userId, existing, onSaved, resetKey }: Props) {
         source_ref: existing?.source_ref ?? null,
         created_at: existing?.created_at,
       });
+      haptic.success();
       onSaved(row);
     } catch (e) {
       Alert.alert('Could not save', e instanceof Error ? e.message : String(e));

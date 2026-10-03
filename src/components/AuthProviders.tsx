@@ -7,7 +7,7 @@ import { friendlyAuthError, useAuth } from '@/lib/auth';
 import { spacing, useTheme } from '@/lib/theme';
 
 /** Apple + Google buttons, shared by sign-in and sign-up. */
-export function AuthProviders() {
+export function AuthProviders({ lead = false }: { lead?: boolean }) {
   const { dark } = useTheme();
   const { signInWithApple, signInWithGoogle } = useAuth();
   const [appleAvailable, setAppleAvailable] = useState(false);
@@ -31,9 +31,11 @@ export function AuthProviders() {
 
   return (
     <View style={{ gap: spacing.md }}>
-      <Text variant="caption" muted style={{ textAlign: 'center' }}>
-        or continue with
-      </Text>
+      {lead ? null : (
+        <Text variant="caption" muted style={{ textAlign: 'center' }}>
+          or continue with
+        </Text>
+      )}
       {appleAvailable ? (
         <AppleAuthentication.AppleAuthenticationButton
           buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}

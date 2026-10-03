@@ -1,4 +1,16 @@
-import { formatDate, formatTime, plural, relativeTime } from '@/lib/format';
+import { formatDate, formatDay, formatTime, plural, relativeTime } from '@/lib/format';
+
+describe('formatDay', () => {
+  const now = new Date(2025, 6, 6, 15, 0);
+  it('names today and yesterday', () => {
+    expect(formatDay(new Date(2025, 6, 6, 8, 0), now)).toBe('Today');
+    expect(formatDay(new Date(2025, 6, 5, 23, 59), now)).toBe('Yesterday');
+  });
+  it('drops the year inside the current year and keeps it otherwise', () => {
+    expect(formatDay(new Date(2025, 2, 1), now)).toBe('1 Mar');
+    expect(formatDay(new Date(2024, 11, 31), now)).toBe('31 Dec 2024');
+  });
+});
 
 describe('format', () => {
   const d = new Date(2025, 6, 6, 14, 5);

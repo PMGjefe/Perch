@@ -8,14 +8,14 @@ import { SightingCard } from '@/components/SightingCard';
 import { SightingsMap } from '@/components/SightingsMap';
 import { useSyncState } from '@/components/SyncProvider';
 import { useBottomPadding } from '@/components/TabBarInset';
-import { Chip, Empty, Row, Text } from '@/components/ui';
+import { Button, Chip, Empty, Row, Text } from '@/components/ui';
 import { useLocalQuery, useLocalSightings } from '@/hooks/useLocalSightings';
 import { useAuth, useUserId } from '@/lib/auth';
 import * as db from '@/lib/db';
 import { haversineM } from '@/lib/geo';
 import { groupOutings } from '@/lib/insights';
 import { usePrefetchPhotoUrls } from '@/lib/photos';
-import { formatDate } from '@/lib/format';
+import { formatDay } from '@/lib/format';
 import { spacing, useTheme } from '@/lib/theme';
 
 export default function DiaryScreen() {
@@ -93,7 +93,7 @@ export default function DiaryScreen() {
           item.kind === 'outing' ? (
             <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.lg, paddingBottom: spacing.xs, gap: 2 }}>
               <Text variant="label" muted>
-                {formatDate(item.outing.sightings[0].observed_at)}
+                {formatDay(item.outing.sightings[0].observed_at)}
                 {item.outing.place ? ` · ${item.outing.place}` : ''}
               </Text>
               {item.outing.sightings.length > 1 ? (
@@ -109,7 +109,14 @@ export default function DiaryScreen() {
             </View>
           )
         }
-        ListEmptyComponent={<Empty icon="book-outline" title={year || place ? 'Nothing matches' : 'No sightings yet'} body={year || place ? 'Try a different filter.' : 'Tap + to log your first bird.'} />}
+        ListEmptyComponent={
+          <Empty
+            icon="book-outline"
+            title={year || place ? 'Nothing matches' : 'Your diary starts here'}
+            body={year || place ? 'Try a different filter.' : 'Every bird you log lands on this page, grouped by outing.'}
+            action={year || place ? undefined : <Button title="Log your first bird" icon="add" onPress={() => router.push('/(tabs)/log')} />}
+          />
+        }
       />
     </View>
   );

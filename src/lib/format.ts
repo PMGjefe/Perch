@@ -6,6 +6,16 @@ export function formatDate(iso: string | Date, withYear = true): string {
   return withYear ? `${base} ${d.getFullYear()}` : base;
 }
 
+/** "Today", "Yesterday", or the date; the year only when it is not this year. */
+export function formatDay(iso: string | Date, now: Date = new Date()): string {
+  const d = typeof iso === 'string' ? new Date(iso) : iso;
+  const day = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const diff = Math.round((day(now) - day(d)) / 86400000);
+  if (diff === 0) return 'Today';
+  if (diff === 1) return 'Yesterday';
+  return formatDate(d, d.getFullYear() !== now.getFullYear());
+}
+
 export function formatTime(iso: string | Date): string {
   const d = typeof iso === 'string' ? new Date(iso) : iso;
   const h = d.getHours();

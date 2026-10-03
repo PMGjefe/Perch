@@ -17,6 +17,7 @@ export default function SignIn() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
+  const [useEmail, setUseEmail] = useState(false);
   const passwordRef = useRef<TextInput>(null);
 
   const submit = async () => {
@@ -41,17 +42,21 @@ export default function SignIn() {
           </Text>
           <Text style={{ fontFamily: fonts.displayItalic, fontSize: 19, color: colors.textMuted, textAlign: 'center' }}>Your sightings, your life list, your people.</Text>
         </View>
-        <View style={{ gap: spacing.md }}>
-          <Input label="Email" value={email} onChangeText={setEmail} autoCapitalize="none" autoComplete="email" keyboardType="email-address" textContentType="emailAddress" returnKeyType="next" onSubmitEditing={() => passwordRef.current?.focus()} blurOnSubmit={false} />
-          <Input ref={passwordRef} label="Password" value={password} onChangeText={setPassword} secureTextEntry autoComplete="password" textContentType="password" returnKeyType="go" onSubmitEditing={submit} />
-          <Button title="Sign in" onPress={submit} loading={busy} disabled={!email || !password} />
-        </View>
-        <AuthProviders />
-        <Link href="/(auth)/forgot-password" asChild>
-          <Text variant="caption" muted style={{ textAlign: 'center', paddingVertical: spacing.sm }}>
-            Forgot your password?
-          </Text>
-        </Link>
+        <AuthProviders lead />
+        {useEmail ? (
+          <View style={{ gap: spacing.md }}>
+            <Input label="Email" value={email} onChangeText={setEmail} autoFocus autoCapitalize="none" autoComplete="email" keyboardType="email-address" textContentType="emailAddress" returnKeyType="next" onSubmitEditing={() => passwordRef.current?.focus()} blurOnSubmit={false} />
+            <Input ref={passwordRef} label="Password" value={password} onChangeText={setPassword} secureTextEntry autoComplete="password" textContentType="password" returnKeyType="go" onSubmitEditing={submit} />
+            <Button title="Sign in" onPress={submit} loading={busy} disabled={!email || !password} />
+            <Link href="/(auth)/forgot-password" asChild>
+              <Text variant="caption" muted style={{ textAlign: 'center', paddingVertical: spacing.sm }}>
+                Forgot your password?
+              </Text>
+            </Link>
+          </View>
+        ) : (
+          <Button title="Sign in with email" kind="secondary" icon="mail-outline" onPress={() => setUseEmail(true)} />
+        )}
         <Link href="/(auth)/sign-up" asChild>
           <Text style={{ textAlign: 'center', color: colors.accent, fontFamily: fonts.semibold, paddingVertical: spacing.md }}>New here? Create an account</Text>
         </Link>

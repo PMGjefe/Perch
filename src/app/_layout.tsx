@@ -47,7 +47,7 @@ function Root() {
     if (loading) return;
     const inAuth = segments[0] === '(auth)';
     if (!session && !inAuth) router.replace('/(auth)/sign-in');
-    else if (session && inAuth) router.replace('/(tabs)/feed');
+    else if (session && inAuth) router.replace('/(tabs)/diary');
   }, [session, loading, segments, router]);
 
   if (loading || !fontsReady) return <Loading />;
