@@ -75,7 +75,11 @@
       "legal": {
         "privacy": "https://example.com/perch/privacy",
         "terms": "https://example.com/perch/terms"
+      },
+      "eas": {
+        "projectId": "ea65de9e-766d-45ad-8020-52f1f8deec9e"
       }
-    }
+    },
+    "owner": "phr23s-team"
   }
 }

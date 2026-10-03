@@ -10,5 +10,7 @@ fi
 if ! grep -q "supabase.co" .env 2>/dev/null; then
   echo "No .env yet. Run once with EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY set (see README)."; exit 1
 fi
+# ngrok only reads HTTP_PROXY; in proxied cloud sandboxes only HTTPS_PROXY is set.
+if [ -n "$HTTPS_PROXY" ] && [ -z "$HTTP_PROXY" ]; then export HTTP_PROXY="$HTTPS_PROXY"; fi
 export CI=1
 npx expo start --tunnel
