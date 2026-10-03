@@ -9,6 +9,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import { Platform } from 'react-native';
 
 import { clearLocalData, purgeOtherUsers } from '@/lib/db';
+import { errorMessage, friendlyError } from '@/lib/errors';
 import { invalidateProfile } from '@/lib/social';
 import { supabase } from '@/lib/supabase';
 import type { Profile } from '@/types/db';
@@ -152,7 +153,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  /** Sign out. Local data is wiped unless unsynced sightings would be lost (`keepLocal`). */
+  /** Sign out. Local data is wiped unless sightings not yet backed up would be lost (`keepLocal`). */
   const signOut = useCallback(
     async (opts: { keepLocal?: boolean } = {}) => {
       if (!opts.keepLocal) clearLocalData();
@@ -215,11 +216,12 @@ function parseAuthParams(url: string): Record<string, string> {
   return out;
 }
 
+/** Sign-in copy: the few auth-specific causes first, then the shared plain-words helper. */
 export function friendlyAuthError(e: unknown): string {
-  const msg = e instanceof Error ? e.message : String(e);
+  const msg = errorMessage(e);
   if (/invalid login credentials/i.test(msg)) return 'Wrong email or password.';
   if (/already registered/i.test(msg)) return 'That email already has an account.';
   if (/canceled|cancelled|ERR_REQUEST_CANCELED/i.test(msg)) return '';
   if (/network request failed|failed to fetch|network/i.test(msg)) return 'You appear to be offline.';
-  return msg;
+  return friendlyError(e, 'Could not sign in. Check your details and try again.');
 }

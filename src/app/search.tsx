@@ -6,6 +6,7 @@ import { ErrorState } from '@/components/ErrorState';
 
 import { ProfileRow } from '@/components/ProfileRow';
 import { Divider, Empty, Input } from '@/components/ui';
+import { friendlyError } from '@/lib/errors';
 import { searchProfiles } from '@/lib/social';
 import { spacing, useTheme } from '@/lib/theme';
 import type { PublicProfile } from '@/types/db';
@@ -24,7 +25,7 @@ export default function Search() {
       () =>
         searchProfiles(term)
           .then((r) => active && setState({ term, results: r, error: null }))
-          .catch((e: unknown) => active && setState({ term, results: [], error: e instanceof Error ? e.message : String(e) })),
+          .catch((e: unknown) => active && setState({ term, results: [], error: friendlyError(e, 'Could not search right now.') })),
       250,
     );
     return () => {

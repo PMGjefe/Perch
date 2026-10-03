@@ -11,7 +11,9 @@ import { BottomInset, Button, Chip, Empty, Input, Loading, Row, SwitchRow, Text 
 import { useAsync } from '@/hooks/useAsync';
 import { useUserId } from '@/lib/auth';
 import * as db from '@/lib/db';
+import { friendlyError } from '@/lib/errors';
 import { formatDate } from '@/lib/format';
+import { haptic } from '@/lib/haptics';
 import { fetchList, replaceListItems, saveList } from '@/lib/social';
 import { speciesByCode } from '@/lib/taxonomy';
 import { spacing, useTheme } from '@/lib/theme';
@@ -95,7 +97,10 @@ export default function EditList() {
   };
 
   const save = async () => {
-    if (!title.trim()) return Alert.alert('Give the list a title');
+    if (!title.trim()) {
+      haptic.warning();
+      return Alert.alert('Give the list a title');
+    }
     setSaving(true);
     try {
       const list = await saveList({ ...(isNew ? {} : { id }), user_id: userId, title: title.trim(), description: description.trim(), is_public: isPublic });
@@ -103,7 +108,8 @@ export default function EditList() {
       if (isNew) router.replace({ pathname: '/list/[id]', params: { id: list.id } });
       else router.back();
     } catch (e) {
-      Alert.alert('Could not save', e instanceof Error ? e.message : String(e));
+      haptic.warning();
+      Alert.alert('Could not save', friendlyError(e, 'Could not save the list.'));
     } finally {
       setSaving(false);
     }

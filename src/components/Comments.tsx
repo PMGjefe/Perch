@@ -7,7 +7,9 @@ import { reportContent } from '@/components/ReportSheet';
 import { Avatar, Button, Input, Row, Text } from '@/components/ui';
 import { useAsync } from '@/hooks/useAsync';
 import { useUserId } from '@/lib/auth';
+import { friendlyError } from '@/lib/errors';
 import { relativeTime } from '@/lib/format';
+import { haptic } from '@/lib/haptics';
 import { addComment, deleteComment, fetchComments, fetchProfiles } from '@/lib/social';
 import { spacing, useTheme } from '@/lib/theme';
 import type { PublicProfile, TargetType } from '@/types/db';
@@ -33,7 +35,8 @@ export function Comments({ type, id, onCountChange }: { type: TargetType; id: st
       onCountChange?.(1);
       await reload();
     } catch (e) {
-      Alert.alert('Could not comment', e instanceof Error ? e.message : String(e));
+      haptic.warning();
+      Alert.alert('Could not comment', friendlyError(e, 'Could not post your comment.'));
     } finally {
       setBusy(false);
     }
@@ -51,7 +54,8 @@ export function Comments({ type, id, onCountChange }: { type: TargetType; id: st
             onCountChange?.(-1);
             reload();
           } catch (e) {
-            Alert.alert('Could not delete', e instanceof Error ? e.message : String(e));
+            haptic.warning();
+            Alert.alert('Could not delete', friendlyError(e, 'Could not delete that comment.'));
           }
         },
       },

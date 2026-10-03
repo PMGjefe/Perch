@@ -3,7 +3,7 @@ import React from 'react';
 import { KeyboardAvoidingView, Platform } from 'react-native';
 
 import { SightingForm } from '@/components/SightingForm';
-import { Empty, Screen } from '@/components/ui';
+import { Button, Empty, Screen } from '@/components/ui';
 import { useUserId } from '@/lib/auth';
 import { useLocalSighting } from '@/hooks/useLocalSightings';
 
@@ -17,7 +17,11 @@ export default function EditSighting() {
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Stack.Screen options={{ title: 'Edit sighting' }} />
       <Screen scroll>
-        {sighting ? <SightingForm userId={userId} existing={sighting} onSaved={() => router.back()} /> : <Empty title="Sighting not found" />}
+        {sighting ? (
+          <SightingForm userId={userId} existing={sighting} onSaved={() => router.back()} />
+        ) : (
+          <Empty icon="eye-off-outline" title="Sighting not found" body="It may have been deleted on another device." action={<Button title="Back" kind="secondary" onPress={() => router.back()} />} />
+        )}
       </Screen>
     </KeyboardAvoidingView>
   );

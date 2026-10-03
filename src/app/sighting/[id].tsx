@@ -24,6 +24,9 @@ import { speciesByCode } from '@/lib/taxonomy';
 import { fonts, radius, spacing, useTheme } from '@/lib/theme';
 import type { Engagement, PublicSighting } from '@/types/db';
 
+// What to call this thing in copy: "saved on this iPhone" reads better than "on this device".
+const device = Platform.OS === 'ios' ? (Platform.isPad ? 'iPad' : 'iPhone') : 'phone';
+
 export default function SightingDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const userId = useUserId();
@@ -170,7 +173,7 @@ export default function SightingDetail() {
                 <Text muted>
                   {sighting.visibility === 'public' ? 'Public' : sighting.visibility === 'followers' ? 'Followers only' : 'Only you'}
                   {sighting.sensitive ? ' · sensitive location' : ''}
-                  {local?.dirty ? ' · waiting to sync' : ''}
+                  {local?.dirty ? ` · saved on this ${device}, backing up soon` : ''}
                 </Text>
               </Row>
             ) : null}

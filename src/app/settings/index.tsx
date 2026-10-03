@@ -12,12 +12,17 @@ import { useSyncState } from '@/components/SyncProvider';
 import { deleteAccount } from '@/lib/social';
 import { backOr } from '@/lib/nav';
 import { useAuth, useUserId } from '@/lib/auth';
+import { friendlyError } from '@/lib/errors';
 import type { LatLng } from '@/lib/geo';
+import { haptic } from '@/lib/haptics';
 import { AVATAR_BUCKET, avatarPublicUrl, supabase } from '@/lib/supabase';
 import { fonts, radius, spacing, useTheme } from '@/lib/theme';
 import { USERNAME } from '@/lib/validation';
 
 const LEGAL = (Constants.expoConfig?.extra?.legal as { privacy: string; terms: string } | undefined) ?? { privacy: 'https://example.com/privacy', terms: 'https://example.com/terms' };
+
+// What to call this thing in copy: "only on this iPhone" reads better than "on this device".
+const device = Platform.OS === 'ios' ? (Platform.isPad ? 'iPad' : 'iPhone') : 'phone';
 
 export default function Settings() {
   const userId = useUserId();
@@ -42,18 +47,25 @@ export default function Settings() {
     const path = `${userId}/avatar-${Date.now()}.jpg`;
     const bytes = await new File(res.assets[0].uri).arrayBuffer();
     const { error } = await supabase.storage.from(AVATAR_BUCKET).upload(path, bytes, { contentType: 'image/jpeg', upsert: true });
-    if (error) return Alert.alert('Upload failed', error.message);
+    if (error) {
+      haptic.warning();
+      return Alert.alert('Could not upload', friendlyError(error, 'Could not upload that photo.'));
+    }
     setAvatar(avatarPublicUrl(path));
   };
 
   const confirmSignOut = () =>
     pending > 0
-      ? Alert.alert('Sign out?', `${pending} sighting${pending === 1 ? '' : 's'} are not backed up yet. Signing out and clearing this device would lose them.`, [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Keep them, sign out', onPress: () => signOut({ keepLocal: true }) },
-          { text: 'Clear and sign out', style: 'destructive', onPress: () => signOut() },
-        ])
-      : Alert.alert('Sign out?', 'Your sightings are safe in your account and will be removed from this device.', [
+      ? Alert.alert(
+          'Some sightings have not backed up yet',
+          `${pending} sighting${pending === 1 ? '' : 's'} ${pending === 1 ? 'is' : 'are'} only on this ${device}. Connect to the internet and give it a minute, or sign out and keep ${pending === 1 ? 'it' : 'them'} here for next time.`,
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Sign out, keep them here', onPress: () => signOut({ keepLocal: true }) },
+            { text: 'Sign out and erase', style: 'destructive', onPress: () => signOut() },
+          ],
+        )
+      : Alert.alert('Sign out?', 'Your birds are safe in your account.', [
           { text: 'Cancel', style: 'cancel' },
           { text: 'Sign out', style: 'destructive', onPress: () => signOut() },
         ]);
@@ -69,14 +81,18 @@ export default function Settings() {
             await deleteAccount(userId);
             await signOut();
           } catch (e) {
-            Alert.alert('Could not delete', e instanceof Error ? e.message : String(e));
+            haptic.warning();
+            Alert.alert('Could not delete', friendlyError(e, 'Could not delete your account.'));
           }
         },
       },
     ]);
 
   const save = async () => {
-    if (!USERNAME.test(username)) return Alert.alert('Username', 'Use 3–24 lowercase letters, numbers or underscores.');
+    if (!USERNAME.test(username)) {
+      haptic.warning();
+      return Alert.alert('Username', 'Use 3–24 lowercase letters, numbers or underscores.');
+    }
     setSaving(true);
     try {
       await updateProfile({
@@ -91,7 +107,8 @@ export default function Settings() {
       });
       backOr('/(tabs)/me');
     } catch (e) {
-      Alert.alert('Could not save', /username/i.test(String(e)) ? 'That username is taken.' : e instanceof Error ? e.message : String(e));
+      haptic.warning();
+      Alert.alert('Could not save', friendlyError(e, 'Could not save your profile.'));
     } finally {
       setSaving(false);
     }
