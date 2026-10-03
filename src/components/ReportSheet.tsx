@@ -1,5 +1,6 @@
 import { Alert } from 'react-native';
 
+import { friendlyError } from '@/lib/errors';
 import { haptic } from '@/lib/haptics';
 import { type ReportTarget, report } from '@/lib/social';
 
@@ -16,7 +17,8 @@ export function reportContent(userId: string, type: ReportTarget, id: string) {
           haptic.success();
           Alert.alert('Thanks', 'We will take a look.');
         } catch (e) {
-          Alert.alert('Could not send report', e instanceof Error ? e.message : String(e));
+          haptic.warning();
+          Alert.alert('Could not send report', friendlyError(e, 'Could not send your report.'));
         }
       },
     })),

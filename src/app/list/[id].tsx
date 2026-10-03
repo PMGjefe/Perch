@@ -10,6 +10,8 @@ import { Photo } from '@/components/Photo';
 import { Avatar, BottomInset, Button, Card, Empty, IconButton, Loading, Row, Screen, Text } from '@/components/ui';
 import { useAsync } from '@/hooks/useAsync';
 import { useUserId } from '@/lib/auth';
+import { friendlyError } from '@/lib/errors';
+import { haptic } from '@/lib/haptics';
 import { backOr } from '@/lib/nav';
 import { shareList } from '@/lib/share';
 import { formatDate } from '@/lib/format';
@@ -80,7 +82,8 @@ export default function ListDetail() {
             await deleteList(id);
             backOr('/(tabs)/me');
           } catch (e) {
-            Alert.alert('Could not delete', e instanceof Error ? e.message : String(e));
+            haptic.warning();
+            Alert.alert('Could not delete', friendlyError(e, 'Could not delete the list.'));
           }
         },
       },

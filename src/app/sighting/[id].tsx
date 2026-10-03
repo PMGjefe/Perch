@@ -18,6 +18,7 @@ import { backOr } from '@/lib/nav';
 import { shareSighting } from '@/lib/share';
 import { haptic } from '@/lib/haptics';
 import * as db from '@/lib/db';
+import { device } from '@/lib/errors';
 import { formatDateTime } from '@/lib/format';
 import { fetchEngagement, fetchProfile, fetchPublicSighting, setLike } from '@/lib/social';
 import { speciesByCode } from '@/lib/taxonomy';
@@ -170,7 +171,7 @@ export default function SightingDetail() {
                 <Text muted>
                   {sighting.visibility === 'public' ? 'Public' : sighting.visibility === 'followers' ? 'Followers only' : 'Only you'}
                   {sighting.sensitive ? ' · sensitive location' : ''}
-                  {local?.dirty ? ' · waiting to sync' : ''}
+                  {local?.dirty ? ` · saved on this ${device}, backing up soon` : ''}
                 </Text>
               </Row>
             ) : null}

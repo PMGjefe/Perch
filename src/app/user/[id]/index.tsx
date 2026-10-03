@@ -13,8 +13,10 @@ import { useAsync } from '@/hooks/useAsync';
 import { useLocalQuery } from '@/hooks/useLocalSightings';
 import { useUserId } from '@/lib/auth';
 import * as db from '@/lib/db';
+import { friendlyError } from '@/lib/errors';
 import { signPhotoUrls } from '@/lib/photos';
 import { formatDate } from '@/lib/format';
+import { haptic } from '@/lib/haptics';
 import { blockUser, fetchLists, fetchProfile, fetchProfileStats, fetchUserLifeList, fetchUserSightings, isBlocked, setFollow, unblockUser } from '@/lib/social';
 import { speciesByCode } from '@/lib/taxonomy';
 import { spacing, useTheme } from '@/lib/theme';
@@ -92,7 +94,8 @@ export default function UserProfile() {
             else await blockUser(me, id);
             reload();
           } catch (e) {
-            Alert.alert('Could not update', e instanceof Error ? e.message : String(e));
+            haptic.warning();
+            Alert.alert('Could not update', friendlyError(e, 'Could not update that right now.'));
           }
         },
       },
