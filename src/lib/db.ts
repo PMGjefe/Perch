@@ -354,3 +354,10 @@ export function clearLocalData() {
   db.execSync('delete from sightings; delete from meta;');
   notify(false);
 }
+
+// ---- W1-picker
+/** Sightings per species (code → count), so the picker can show seen counts and tag the rest as lifers. */
+export function speciesCounts(userId: string): Map<string, number> {
+  const rows = db.getAllSync<{ c: string; n: number }>('select species_code as c, count(*) as n from sightings where user_id = ? and deleted = 0 group by species_code', [userId]);
+  return new Map(rows.map((r) => [r.c, r.n]));
+}
