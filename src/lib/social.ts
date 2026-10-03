@@ -87,14 +87,14 @@ export async function setFollow(userId: string, followeeId: string, follow: bool
 }
 
 export async function fetchFollowers(userId: string): Promise<PublicProfile[]> {
-  const { data, error } = await supabase.from('follows').select('follower_id').eq('followee_id', userId);
+  const { data, error } = await supabase.from('follows').select('follower_id').eq('followee_id', userId).eq('status', 'accepted');
   fail(error);
   const ids = (data ?? []).map((r: { follower_id: string }) => r.follower_id);
   return [...(await fetchProfiles(ids)).values()];
 }
 
 export async function fetchFollowing(userId: string): Promise<PublicProfile[]> {
-  const { data, error } = await supabase.from('follows').select('followee_id').eq('follower_id', userId);
+  const { data, error } = await supabase.from('follows').select('followee_id').eq('follower_id', userId).eq('status', 'accepted');
   fail(error);
   const ids = (data ?? []).map((r: { followee_id: string }) => r.followee_id);
   return [...(await fetchProfiles(ids)).values()];
@@ -205,4 +205,53 @@ export async function fetchSightingsByIds(ids: string[]): Promise<Map<string, Pu
   const { data, error } = await supabase.from('public_sightings').select('*').in('id', ids);
   fail(error);
   return new Map(((data ?? []) as PublicSighting[]).map((s) => [s.id, s]));
+}
+
+// ---------------------------------------------------------------- moderation
+export async function blockUser(userId: string, blockedId: string): Promise<void> {
+  const { error } = await supabase.from('blocks').upsert({ blocker_id: userId, blocked_id: blockedId }, { onConflict: 'blocker_id,blocked_id' });
+  fail(error);
+  profileCache.delete(blockedId);
+}
+export async function unblockUser(userId: string, blockedId: string): Promise<void> {
+  const { error } = await supabase.from('blocks').delete().match({ blocker_id: userId, blocked_id: blockedId });
+  fail(error);
+}
+export async function isBlocked(userId: string, otherId: string): Promise<boolean> {
+  const { data, error } = await supabase.from('blocks').select('blocked_id').match({ blocker_id: userId, blocked_id: otherId }).maybeSingle();
+  fail(error);
+  return !!data;
+}
+export type ReportTarget = 'sighting' | 'list' | 'comment' | 'profile';
+export async function report(userId: string, type: ReportTarget, id: string, reason: string): Promise<void> {
+  const { error } = await supabase.from('reports').insert({ reporter_id: userId, target_type: type, target_id: id, reason });
+  fail(error);
+}
+/** Deletes the account server-side (auth user, rows, photos). Caller signs out afterwards. */
+export async function deleteAccount(userId: string): Promise<void> {
+  for (const bucket of ['sighting-photos', 'avatars']) {
+    const { data } = await supabase.storage.from(bucket).list(userId, { limit: 1000 });
+    const names = (data ?? []).map((o) => `${userId}/${o.name}`);
+    if (names.length) await supabase.storage.from(bucket).remove(names);
+  }
+  const { error } = await supabase.rpc('delete_account');
+  fail(error);
+}
+
+// ---------------------------------------------------------------- follow requests
+export async function fetchFollowRequests(userId: string): Promise<PublicProfile[]> {
+  const { data, error } = await supabase.from('follows').select('follower_id').eq('followee_id', userId).eq('status', 'pending');
+  fail(error);
+  return [...(await fetchProfiles((data ?? []).map((r: { follower_id: string }) => r.follower_id))).values()];
+}
+export async function answerFollowRequest(userId: string, followerId: string, accept: boolean): Promise<void> {
+  const q = accept
+    ? supabase.from('follows').update({ status: 'accepted' }).match({ follower_id: followerId, followee_id: userId })
+    : supabase.from('follows').delete().match({ follower_id: followerId, followee_id: userId });
+  const { error } = await q;
+  fail(error);
+}
+export async function removeFollower(userId: string, followerId: string): Promise<void> {
+  const { error } = await supabase.from('follows').delete().match({ follower_id: followerId, followee_id: userId });
+  fail(error);
 }

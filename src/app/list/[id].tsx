@@ -4,10 +4,14 @@ import React, { useCallback, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, Pressable, View } from 'react-native';
 
 import { Comments } from '@/components/Comments';
+import { ErrorState } from '@/components/ErrorState';
+import { reportContent } from '@/components/ReportSheet';
 import { Photo } from '@/components/Photo';
 import { Avatar, BottomInset, Button, Card, Empty, IconButton, Loading, Row, Screen, Text } from '@/components/ui';
 import { useAsync } from '@/hooks/useAsync';
 import { useUserId } from '@/lib/auth';
+import { backOr } from '@/lib/nav';
+import { shareList } from '@/lib/share';
 import { formatDate } from '@/lib/format';
 import { deleteList, fetchEngagement, fetchList, fetchProfile, fetchSightingsByIds, isFollowingList, setLike, setListFollow } from '@/lib/social';
 import { speciesByCode } from '@/lib/taxonomy';
@@ -22,7 +26,7 @@ export default function ListDetail() {
   const [eng, setEng] = useState<Engagement | null>(null);
   const [following, setFollowing] = useState<boolean | null>(null);
 
-  const { data, loading, reload } = useAsync(async () => {
+  const { data, loading, error, reload } = useAsync(async () => {
     const res = await fetchList(id);
     if (!res) return null;
     const [profile, sightings, e, f] = await Promise.all([
@@ -72,13 +76,25 @@ export default function ListDetail() {
         text: 'Delete',
         style: 'destructive',
         onPress: async () => {
-          await deleteList(id);
-          router.back();
+          try {
+            await deleteList(id);
+            backOr('/(tabs)/me');
+          } catch (e) {
+            Alert.alert('Could not delete', e instanceof Error ? e.message : String(e));
+          }
         },
       },
     ]);
 
   if (loading && !data) return <Loading />;
+  if (error && !data) {
+    return (
+      <Screen>
+        <Stack.Screen options={{ title: '' }} />
+        <ErrorState error={error} onRetry={reload} />
+      </Screen>
+    );
+  }
   if (!data) {
     return (
       <Screen>
@@ -93,14 +109,19 @@ export default function ListDetail() {
       <Stack.Screen
         options={{
           title: '',
-          headerRight: isOwner
-            ? () => (
-                <Row gap={0}>
-                  <IconButton name="create-outline" onPress={() => router.push({ pathname: '/list/edit/[id]', params: { id } })} />
-                  <IconButton name="trash-outline" color={colors.danger} onPress={remove} />
-                </Row>
-              )
-            : undefined,
+          headerRight: () => (
+            <Row gap={0}>
+              <IconButton name="share-outline" label="Share" onPress={() => shareList(data.list)} />
+              {isOwner ? (
+                <>
+                  <IconButton name="create-outline" label="Edit list" onPress={() => router.push({ pathname: '/list/edit/[id]', params: { id } })} />
+                  <IconButton name="trash-outline" label="Delete list" color={colors.danger} onPress={remove} />
+                </>
+              ) : (
+                <IconButton name="flag-outline" label="Report" onPress={() => reportContent(userId, 'list', id)} />
+              )}
+            </Row>
+          ),
         }}
       />
       <Screen scroll style={{ gap: spacing.lg }}>

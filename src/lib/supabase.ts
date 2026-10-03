@@ -24,6 +24,7 @@ export const supabase = createClient(url, anonKey, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
+    flowType: 'pkce', // tokens never travel in the redirect URL
   },
 });
 

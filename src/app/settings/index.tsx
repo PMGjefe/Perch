@@ -1,21 +1,26 @@
 import { File } from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
-import { Stack, useRouter } from 'expo-router';
+import { Stack } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, Pressable, Switch, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, Pressable, View } from 'react-native';
 
 import { LocationField } from '@/components/LocationField';
-import { Avatar, BottomInset, Button, Input, Row, Screen, Text } from '@/components/ui';
+import { Avatar, BottomInset, Button, Input, Screen, SwitchRow, Text } from '@/components/ui';
+import * as WebBrowser from 'expo-web-browser';
+import Constants from 'expo-constants';
+import { deleteAccount } from '@/lib/social';
+import { backOr } from '@/lib/nav';
 import { useAuth, useUserId } from '@/lib/auth';
 import type { LatLng } from '@/lib/geo';
 import { AVATAR_BUCKET, avatarPublicUrl, supabase } from '@/lib/supabase';
 import { fonts, radius, spacing, useTheme } from '@/lib/theme';
 import { USERNAME } from '@/lib/validation';
 
+const LEGAL = (Constants.expoConfig?.extra?.legal as { privacy: string; terms: string } | undefined) ?? { privacy: 'https://example.com/privacy', terms: 'https://example.com/terms' };
+
 export default function Settings() {
   const userId = useUserId();
-  const { profile, updateProfile } = useAuth();
-  const router = useRouter();
+  const { profile, updateProfile, signOut } = useAuth();
   const { colors } = useTheme();
   const [displayName, setDisplayName] = useState(profile?.display_name ?? '');
   const [username, setUsername] = useState(profile?.username ?? '');
@@ -23,11 +28,12 @@ export default function Settings() {
   const [avatar, setAvatar] = useState<string | null>(profile?.avatar_url ?? null);
   const [home, setHome] = useState<LatLng | null>(profile?.home_lat != null && profile.home_lng != null ? { lat: profile.home_lat, lng: profile.home_lng } : null);
   const [hideHome, setHideHome] = useState(profile?.hide_home ?? true);
+  const [approveFollowers, setApproveFollowers] = useState(profile?.approve_followers ?? false);
   const [saving, setSaving] = useState(false);
 
   const pickAvatar = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) return;
+    if (!perm.granted) return Alert.alert('Photos', 'Allow photo library access in Settings to choose a profile picture.');
     const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.7 });
     if (res.canceled || !res.assets[0]) return;
     const path = `${userId}/avatar-${Date.now()}.jpg`;
@@ -36,6 +42,23 @@ export default function Settings() {
     if (error) return Alert.alert('Upload failed', error.message);
     setAvatar(avatarPublicUrl(path));
   };
+
+  const confirmDelete = () =>
+    Alert.alert('Delete your account?', 'Everything you have logged will be gone. This cannot be undone.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete everything',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteAccount(userId);
+            await signOut();
+          } catch (e) {
+            Alert.alert('Could not delete', e instanceof Error ? e.message : String(e));
+          }
+        },
+      },
+    ]);
 
   const save = async () => {
     if (!USERNAME.test(username)) return Alert.alert('Username', 'Use 3–24 lowercase letters, numbers or underscores.');
@@ -49,8 +72,9 @@ export default function Settings() {
         home_lat: home?.lat ?? null,
         home_lng: home?.lng ?? null,
         hide_home: hideHome,
+        approve_followers: approveFollowers,
       });
-      router.back();
+      backOr('/(tabs)/me');
     } catch (e) {
       Alert.alert('Could not save', /username/i.test(String(e)) ? 'That username is taken.' : e instanceof Error ? e.message : String(e));
     } finally {
@@ -78,21 +102,24 @@ export default function Settings() {
             Set your home and Perch blurs every pin within 500 m of it. Other people see a circle roughly a kilometre wide instead of the exact spot, and the place name is dropped. You always see your own exact pins.
           </Text>
           <LocationField label="Home" value={home} placeName="" onChange={setHome} onPlaceNameChange={() => {}} status="No home set" hidePlaceName />
-          <Row style={{ justifyContent: 'space-between' }}>
-            <View style={{ flex: 1 }}>
-              <Text variant="label">Hide sightings near home</Text>
-              <Text variant="caption" muted>
-                Applies to public and followers-only sightings.
-              </Text>
-            </View>
-            <Switch value={hideHome} onValueChange={setHideHome} trackColor={{ true: colors.accent }} disabled={!home} />
-          </Row>
+          <SwitchRow label="Hide sightings near home" caption="Applies to public and followers-only sightings." value={hideHome} onValueChange={setHideHome} disabled={!home} />
           <Text variant="caption" faint>
             For a nest, roost or rarity anywhere, mark the individual sighting as sensitive instead. That hides its pin from everyone.
           </Text>
         </View>
 
+        <SwitchRow label="Approve followers" caption="New followers wait for your OK before they can see followers-only sightings." value={approveFollowers} onValueChange={setApproveFollowers} />
+
         <Button title="Save" onPress={save} loading={saving} />
+
+        <View style={{ gap: spacing.sm, marginTop: spacing.lg }}>
+          <Button title="Privacy policy" kind="ghost" onPress={() => WebBrowser.openBrowserAsync(LEGAL.privacy)} />
+          <Button title="Terms of use" kind="ghost" onPress={() => WebBrowser.openBrowserAsync(LEGAL.terms)} />
+          <Button title="Delete account" kind="ghost" onPress={confirmDelete} style={{ marginTop: spacing.lg }} />
+          <Text variant="caption" faint style={{ textAlign: 'center' }}>
+            Deleting removes your sightings, lists, photos and comments permanently.
+          </Text>
+        </View>
         <BottomInset />
       </Screen>
     </KeyboardAvoidingView>

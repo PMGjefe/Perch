@@ -19,7 +19,7 @@ create table auth.users (
 );
 create table auth.identities (
   id uuid primary key,
-  user_id uuid references auth.users (id),
+  user_id uuid references auth.users (id) on delete cascade,
   provider_id text,
   identity_data jsonb,
   provider text,

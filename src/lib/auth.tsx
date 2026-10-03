@@ -8,6 +8,7 @@ import * as WebBrowser from 'expo-web-browser';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { Platform } from 'react-native';
 
+import { clearLocalData, purgeOtherUsers } from '@/lib/db';
 import { invalidateProfile } from '@/lib/social';
 import { supabase } from '@/lib/supabase';
 import type { Profile } from '@/types/db';
@@ -24,7 +25,8 @@ interface AuthState {
   signUpWithPassword: (email: string, password: string, username: string) => Promise<{ needsConfirmation: boolean }>;
   signInWithApple: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
-  signOut: () => Promise<void>;
+  signOut: (opts?: { keepLocal?: boolean }) => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
   refreshProfile: () => Promise<void>;
   updateProfile: (patch: Partial<Profile>) => Promise<void>;
 }
@@ -64,19 +66,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let mounted = true;
-    supabase.auth.getSession().then(async ({ data }) => {
-      if (!mounted) return;
-      setSession(data.session);
-      if (data.session) {
-        setLastUserId(data.session.user.id);
-        await loadProfile(data.session.user.id);
+    (async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (!mounted) return;
+        setSession(data.session);
+        if (data.session) {
+          setLastUserId(data.session.user.id);
+          await loadProfile(data.session.user.id);
+        }
+      } catch {
+        // A broken session store must not strand the user on the splash screen.
+      } finally {
+        if (mounted) setLoading(false);
       }
-      setLoading(false);
-    });
+    })();
     const { data: sub } = supabase.auth.onAuthStateChange((_event, next) => {
       setSession(next);
       if (next) {
         setLastUserId(next.user.id);
+        purgeOtherUsers(next.user.id);
         loadProfile(next.user.id);
       } else setProfile(null);
     });
@@ -138,16 +147,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (params.code) {
       const { error: exErr } = await supabase.auth.exchangeCodeForSession(params.code);
       if (exErr) throw exErr;
-    } else if (params.access_token && params.refresh_token) {
-      const { error: setErr } = await supabase.auth.setSession({ access_token: params.access_token, refresh_token: params.refresh_token });
-      if (setErr) throw setErr;
     } else if (params.error_description) {
       throw new Error(params.error_description);
     }
   }, []);
 
-  const signOut = useCallback(async () => {
-    await supabase.auth.signOut();
+  /** Sign out. Local data is wiped unless unsynced sightings would be lost (`keepLocal`). */
+  const signOut = useCallback(
+    async (opts: { keepLocal?: boolean } = {}) => {
+      if (!opts.keepLocal) clearLocalData();
+      if (session) Storage.removeItemAsync(`profile:${session.user.id}`).catch(() => {});
+      await supabase.auth.signOut();
+    },
+    [session],
+  );
+
+  const resetPassword = useCallback(async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: Linking.createURL('auth/callback') });
+    if (error) throw error;
   }, []);
 
   const refreshProfile = useCallback(async () => {
@@ -166,8 +183,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const value = useMemo(
-    () => ({ session, lastUserId, profile, loading, signInWithPassword, signUpWithPassword, signInWithApple, signInWithGoogle, signOut, refreshProfile, updateProfile }),
-    [session, lastUserId, profile, loading, signInWithPassword, signUpWithPassword, signInWithApple, signInWithGoogle, signOut, refreshProfile, updateProfile],
+    () => ({ session, lastUserId, profile, loading, signInWithPassword, signUpWithPassword, signInWithApple, signInWithGoogle, signOut, resetPassword, refreshProfile, updateProfile }),
+    [session, lastUserId, profile, loading, signInWithPassword, signUpWithPassword, signInWithApple, signInWithGoogle, signOut, resetPassword, refreshProfile, updateProfile],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -203,5 +220,6 @@ export function friendlyAuthError(e: unknown): string {
   if (/invalid login credentials/i.test(msg)) return 'Wrong email or password.';
   if (/already registered/i.test(msg)) return 'That email already has an account.';
   if (/canceled|cancelled|ERR_REQUEST_CANCELED/i.test(msg)) return '';
+  if (/network request failed|failed to fetch|network/i.test(msg)) return 'You appear to be offline.';
   return msg;
 }

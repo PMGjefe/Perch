@@ -10,16 +10,19 @@ jest.mock('@/lib/supabase', () => ({
 describe('photo url cache', () => {
   beforeEach(() => mockCreateSignedUrls.mockReset());
 
-  it('passes local files and absolute urls through untouched', () => {
+  it('passes local files and allow-listed urls through, nothing else', () => {
     expect(isDirectUri('file:///a.jpg')).toBe(true);
-    expect(cachedPhotoUrl('https://x/y.jpg')).toBe('https://x/y.jpg');
+    expect(isDirectUri('https://images.unsplash.com/photo-1')).toBe(true);
+    expect(isDirectUri('https://x/y.jpg')).toBe(false); // arbitrary hosts are never fetched
+    expect(isDirectUri('data:image/png;base64,AAAA')).toBe(false);
+    expect(cachedPhotoUrl('https://images.unsplash.com/photo-1')).toBe('https://images.unsplash.com/photo-1');
     expect(cachedPhotoUrl(null)).toBeNull();
   });
 
   it('signs storage paths in one batch and caches them', async () => {
     mockCreateSignedUrls.mockResolvedValue({ data: [{ path: 'u/a.jpg', signedUrl: 'https://s/a' }, { path: 'u/b.jpg', signedUrl: 'https://s/b' }], error: null });
     expect(cachedPhotoUrl('u/a.jpg')).toBeNull();
-    await signPhotoUrls(['u/a.jpg', 'u/b.jpg', 'u/a.jpg', null, 'https://direct']);
+    await signPhotoUrls(['u/a.jpg', 'u/b.jpg', 'u/a.jpg', null, 'https://images.unsplash.com/direct']);
     expect(mockCreateSignedUrls).toHaveBeenCalledTimes(1);
     expect(mockCreateSignedUrls.mock.calls[0][0]).toEqual(['u/a.jpg', 'u/b.jpg']);
     expect(cachedPhotoUrl('u/a.jpg')).toBe('https://s/a');

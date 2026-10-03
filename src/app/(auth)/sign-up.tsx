@@ -47,6 +47,9 @@ export default function SignUp() {
           <Button title="Create account" onPress={submit} loading={busy} disabled={!valid} />
         </View>
         <AuthProviders />
+        <Text variant="caption" faint style={{ textAlign: 'center' }}>
+          By creating an account you agree to the Terms of use and Privacy policy, both in Settings.
+        </Text>
         <Link href="/(auth)/sign-in" asChild>
           <Text style={{ textAlign: 'center', color: colors.accent, fontFamily: fonts.semibold }}>Already have an account? Sign in</Text>
         </Link>

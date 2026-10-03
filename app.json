@@ -2,7 +2,7 @@
   "expo": {
     "name": "Perch",
     "slug": "perch",
-    "version": "0.1.0",
+    "version": "1.0.0",
     "scheme": "perch",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -11,7 +11,12 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#F7F1E8"
+      "backgroundColor": "#F7F1E8",
+      "dark": {
+        "image": "./assets/splash-icon.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#15130F"
+      }
     },
     "ios": {
       "supportsTablet": false,
@@ -35,15 +40,10 @@
       "permissions": [
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION",
-        "CAMERA",
-        "READ_MEDIA_IMAGES"
+        "CAMERA"
       ],
-      "config": {
-        "googleMaps": {
-          "apiKey": "${GOOGLE_MAPS_ANDROID_API_KEY}"
-        }
-      },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "allowBackup": false
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -70,6 +70,12 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "legal": {
+        "privacy": "https://example.com/perch/privacy",
+        "terms": "https://example.com/perch/terms"
+      }
     }
   }
 }

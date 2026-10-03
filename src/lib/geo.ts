@@ -31,6 +31,28 @@ export async function getCurrentLocation(): Promise<LatLng | null> {
   }
 }
 
+/** True when the user has explicitly denied location and the system will not ask again. */
+export async function locationPermissionDenied(): Promise<boolean> {
+  try {
+    const p = await Location.getForegroundPermissionsAsync();
+    return p.status === 'denied' && !p.canAskAgain;
+  } catch {
+    return false;
+  }
+}
+
+/** Current position only if permission was already granted; never prompts. */
+export async function getLocationIfGranted(): Promise<LatLng | null> {
+  try {
+    const p = await Location.getForegroundPermissionsAsync();
+    if (p.status !== 'granted') return null;
+    const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+    return { lat: pos.coords.latitude, lng: pos.coords.longitude };
+  } catch {
+    return null;
+  }
+}
+
 /** Best-effort short place name (park, neighbourhood, town). Returns null offline. */
 export async function reverseGeocode(p: LatLng): Promise<string | null> {
   try {

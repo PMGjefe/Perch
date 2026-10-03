@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import React from 'react';
 import { Alert, Pressable, View } from 'react-native';
@@ -24,10 +25,21 @@ const options: ImagePicker.ImagePickerOptions = { mediaTypes: ['images'], qualit
 export function PhotoField({ uri, onChange }: Props) {
   const { colors } = useTheme();
 
-  const handle = (result: ImagePicker.ImagePickerResult) => {
+  // Read EXIF for the form, then re-encode the file so no metadata (GPS above all) ever leaves the device.
+  const handle = async (result: ImagePicker.ImagePickerResult) => {
     if (result.canceled || !result.assets[0]) return;
     const a = result.assets[0];
-    onChange({ uri: a.uri, exifDate: exifDate(a.exif), exifLocation: exifLocation(a.exif) });
+    let uri = a.uri;
+    try {
+      const ctx = ImageManipulator.manipulate(a.uri);
+      if ((a.width ?? 0) > 2048) ctx.resize({ width: 2048 });
+      const img = await ctx.renderAsync();
+      const out = await img.saveAsync({ format: SaveFormat.JPEG, compress: 0.85 });
+      uri = out.uri;
+    } catch {
+      // Fall back to the original file rather than losing the photo.
+    }
+    onChange({ uri, exifDate: exifDate(a.exif), exifLocation: exifLocation(a.exif) });
   };
 
   const fromLibrary = async () => {
@@ -49,7 +61,7 @@ export function PhotoField({ uri, onChange }: Props) {
       {uri ? (
         <View>
           <Image source={{ uri }} style={{ width: '100%', aspectRatio: 4 / 3, borderRadius: radius.lg, backgroundColor: colors.surfaceAlt }} contentFit="cover" />
-          <IconButton name="close-circle" size={28} color="#fff" onPress={() => onChange(null)} style={{ position: 'absolute', top: 4, right: 4 }} />
+          <IconButton name="close-circle" label="Remove photo" size={28} color="#fff" onPress={() => onChange(null)} style={{ position: 'absolute', top: 6, right: 6, backgroundColor: 'rgba(0,0,0,0.45)', borderRadius: 22 }} />
         </View>
       ) : (
         <Pressable onPress={fromLibrary} style={{ borderWidth: 1, borderStyle: 'dashed', borderColor: colors.border, borderRadius: radius.lg, padding: spacing.xl, alignItems: 'center', gap: spacing.xs }}>

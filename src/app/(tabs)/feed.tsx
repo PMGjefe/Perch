@@ -1,6 +1,6 @@
 import { useFocusEffect, useRouter } from 'expo-router';
-import React, { useCallback, useState } from 'react';
-import { FlatList, RefreshControl, View } from 'react-native';
+import React, { useCallback, useRef, useState } from 'react';
+import { ActivityIndicator, FlatList, RefreshControl, View } from 'react-native';
 
 import { ListCard } from '@/components/ListCard';
 import { SightingCard } from '@/components/SightingCard';
@@ -80,9 +80,14 @@ export default function FeedScreen() {
     }
   }, [items, done, loadingMore]);
 
+  // Refresh on focus only when the feed is stale, so switching tabs does not lose scroll position.
+  const lastLoaded = useRef(0);
   useFocusEffect(
     useCallback(() => {
-      refresh();
+      if (Date.now() - lastLoaded.current > 2 * 60 * 1000) {
+        lastLoaded.current = Date.now();
+        refresh();
+      }
     }, [refresh]),
   );
 
@@ -124,7 +129,9 @@ export default function FeedScreen() {
           )
         }
         ListFooterComponent={
-          moreError ? (
+          loadingMore ? (
+            <ActivityIndicator color={colors.accent} style={{ padding: spacing.lg }} />
+          ) : moreError ? (
             <View style={{ alignItems: 'center', padding: spacing.lg }}>
               <Button title="Couldn't load more. Retry" kind="secondary" onPress={more} />
             </View>

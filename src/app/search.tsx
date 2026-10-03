@@ -1,6 +1,8 @@
 import { Stack } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { FlatList, View } from 'react-native';
+import { ActivityIndicator, FlatList, View } from 'react-native';
+
+import { ErrorState } from '@/components/ErrorState';
 
 import { ProfileRow } from '@/components/ProfileRow';
 import { Divider, Empty, Input } from '@/components/ui';
@@ -11,18 +13,26 @@ import type { PublicProfile } from '@/types/db';
 export default function Search() {
   const { colors } = useTheme();
   const [q, setQ] = useState('');
-  const [results, setResults] = useState<PublicProfile[]>([]);
+  const [state, setState] = useState<{ term: string; results: PublicProfile[]; error: string | null }>({ term: '', results: [], error: null });
+  const term = q.trim();
+  const pending = term.length >= 2 && state.term !== term;
 
   useEffect(() => {
-    const term = q.trim();
     if (term.length < 2) return;
     let active = true;
-    const t = setTimeout(() => searchProfiles(term).then((r) => active && setResults(r)).catch(() => {}), 250);
+    const t = setTimeout(
+      () =>
+        searchProfiles(term)
+          .then((r) => active && setState({ term, results: r, error: null }))
+          .catch((e: unknown) => active && setState({ term, results: [], error: e instanceof Error ? e.message : String(e) })),
+      250,
+    );
     return () => {
       active = false;
       clearTimeout(t);
     };
-  }, [q]);
+  }, [term]);
+  const results = state.term === term ? state.results : [];
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -31,12 +41,20 @@ export default function Search() {
         <Input value={q} onChangeText={setQ} placeholder="Username or name" autoFocus autoCapitalize="none" autoCorrect={false} />
       </View>
       <FlatList
-        data={q.trim().length < 2 ? [] : results}
+        data={term.length < 2 ? [] : results}
         keyExtractor={(p) => p.id}
         ItemSeparatorComponent={Divider}
         keyboardShouldPersistTaps="handled"
         renderItem={({ item }) => <ProfileRow profile={item} />}
-        ListEmptyComponent={<Empty icon="search-outline" title={q.trim().length < 2 ? 'Search for birders' : 'No one found'} body={q.trim().length < 2 ? 'Try a username.' : undefined} />}
+        ListEmptyComponent={
+          pending ? (
+            <ActivityIndicator color={colors.accent} style={{ marginTop: spacing.xl }} />
+          ) : state.error && state.term === term ? (
+            <ErrorState error={state.error} onRetry={() => setState({ term: '', results: [], error: null })} />
+          ) : (
+            <Empty icon="search-outline" title={term.length < 2 ? 'Search for birders' : 'No one found'} body={term.length < 2 ? 'Try a username.' : undefined} />
+          )
+        }
       />
     </View>
   );

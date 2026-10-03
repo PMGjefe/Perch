@@ -139,7 +139,7 @@ export const DraggableItemCard = React.memo(function DraggableItemCard({ itemKey
               ) : null}
             </View>
           </Pressable>
-          <IconButton name="close" size={18} color={colors.danger} onPress={() => onRemove(itemKey)} style={{ padding: 4 }} />
+          <IconButton name="close" label={`Remove ${title}`} size={18} color={colors.danger} onPress={() => onRemove(itemKey)} style={{ padding: 4 }} />
           <Pressable
             onLongPress={lift}
             delayLongPress={DRAG_LONG_PRESS_MS}

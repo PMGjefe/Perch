@@ -32,7 +32,7 @@ const getVersion = () => version;
 
 /** True for values that need no signing: local files and absolute URLs (seed data). */
 export function isDirectUri(path: string): boolean {
-  return path.startsWith('http') || path.startsWith('file:') || path.startsWith('data:');
+  return path.startsWith('file:') || path.startsWith('https://images.unsplash.com/');
 }
 
 function fresh(e: Entry | undefined): e is Entry {

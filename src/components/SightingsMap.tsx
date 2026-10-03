@@ -12,7 +12,7 @@ import type { PublicSighting, Sighting } from '@/types/db';
 type Pin = (Sighting | PublicSighting) & { location_fuzzed?: boolean };
 
 /** Map of sightings. Fuzzed pins render as circles; sensitive/hidden ones have no coords and are skipped. */
-export function SightingsMap({ sightings, onPress, fuzzPreview }: { sightings: Pin[]; onPress?: (id: string) => void; fuzzPreview?: (s: Pin) => boolean }) {
+export function SightingsMap({ sightings, onPress, fuzzPreview, showUser = true }: { sightings: Pin[]; onPress?: (id: string) => void; fuzzPreview?: (s: Pin) => boolean; showUser?: boolean }) {
   const { colors, dark } = useTheme();
   const pins = useMemo(() => sightings.filter((s) => s.lat != null && s.lng != null), [sightings]);
 
@@ -38,7 +38,7 @@ export function SightingsMap({ sightings, onPress, fuzzPreview }: { sightings: P
   }
 
   return (
-    <MapView style={{ flex: 1 }} initialRegion={region} showsUserLocation userInterfaceStyle={dark ? 'dark' : 'light'} customMapStyle={dark ? DARK_MAP : undefined}>
+    <MapView style={{ flex: 1 }} initialRegion={region} showsUserLocation={showUser} userInterfaceStyle={dark ? 'dark' : 'light'} customMapStyle={dark ? DARK_MAP : undefined}>
       {pins.map((s) => {
         const fuzzed = s.location_fuzzed || fuzzPreview?.(s);
         if (fuzzed) {

@@ -14,6 +14,6 @@ export function useLocalSightings(userId: string, filter?: db.SightingFilter) {
   return useLocalQuery(() => db.listSightings(userId, filter), [userId, filter?.year, filter?.place, filter?.speciesCode]);
 }
 
-export function useLocalSighting(id: string) {
-  return useLocalQuery(() => db.getSighting(id), [id]);
+export function useLocalSighting(id: string, userId: string) {
+  return useLocalQuery(() => db.getSighting(id, userId), [id, userId]);
 }

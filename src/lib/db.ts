@@ -4,6 +4,7 @@ import { File } from 'expo-file-system';
 import * as SQLite from 'expo-sqlite';
 import { useSyncExternalStore } from 'react';
 
+import { localDay } from '@/lib/dates';
 import type { Sighting } from '@/types/db';
 
 export interface LocalSighting extends Sighting {
@@ -47,11 +48,7 @@ for (const r of db.getAllSync<{ id: string; observed_at: string }>('select id, o
   db.runSync('update sightings set local_day = ? where id = ?', [localDay(r.observed_at), r.id]);
 }
 
-/** YYYY-MM-DD of an ISO timestamp in the device's local time zone. */
-export function localDay(iso: string): string {
-  const d = new Date(iso);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
+export { localDay };
 
 // ---------------------------------------------------------------- change notifications
 const listeners = new Set<() => void>();
@@ -116,9 +113,24 @@ export function listSightings(userId: string, filter?: SightingFilter): LocalSig
   return db.getAllSync<Raw>(`select * from sightings where user_id = ? and deleted = 0${where} order by observed_at desc`, params).map(fromRaw);
 }
 
-export function getSighting(id: string): LocalSighting | null {
-  const r = db.getFirstSync<Raw>('select * from sightings where id = ? and deleted = 0', [id]);
+export function getSighting(id: string, userId: string): LocalSighting | null {
+  const r = db.getFirstSync<Raw>('select * from sightings where id = ? and user_id = ? and deleted = 0', [id, userId]);
   return r ? fromRaw(r) : null;
+}
+
+/**
+ * A device is shared between accounts only through sign-in. Drop every other user's clean rows
+ * (dirty rows are kept so an unsynced sighting is never lost) and their cached state.
+ */
+export function purgeOtherUsers(userId: string) {
+  const others = db.getAllSync<{ local_photo_uri: string | null }>('select local_photo_uri from sightings where user_id <> ? and dirty = 0 and local_photo_uri is not null', [userId]);
+  for (const o of others) deleteLocalFile(o.local_photo_uri);
+  db.withTransactionSync(() => {
+    db.runSync('delete from sightings where user_id <> ? and dirty = 0', [userId]);
+    db.runSync("delete from meta where (key like 'last_pull:%' or key like 'last_sync_at:%') and key <> 'last_pull:' || ? and key <> 'last_sync_at:' || ?", [userId, userId]);
+    db.runSync("delete from meta where key like 'remove_photo:%' and key not like 'remove_photo:' || ? || '/%'", [userId]);
+  });
+  notify(false);
 }
 
 export interface LifeListEntry {
@@ -240,6 +252,7 @@ export function deleteLocalFile(uri: string | null | undefined) {
 
 /** Remember a storage object to delete on the next sync (photo cleared or replaced). */
 export function queuePhotoRemoval(path: string) {
+  // Keyed by the owner folder (the first path segment) so purging a user also drops their queue.
   db.runSync('insert or replace into meta (key, value) values (?, ?)', [`remove_photo:${path}`, '1']);
 }
 /** Paths queued for deletion that no live local row still points at (a re-attached photo reuses the path). */

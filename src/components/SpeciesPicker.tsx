@@ -47,9 +47,9 @@ export function SpeciesPicker({ visible, onClose, onSelect, suggestions = [] }: 
               autoCapitalize="none"
               style={{ flex: 1, paddingVertical: 12, paddingHorizontal: spacing.sm, fontSize: 17, color: colors.text }}
             />
-            {q ? <IconButton name="close-circle" size={18} color={colors.textFaint} onPress={() => setQ('')} /> : null}
+            {q ? <IconButton name="close-circle" label="Clear search" size={18} color={colors.textFaint} onPress={() => setQ('')} /> : null}
           </View>
-          <IconButton name="close" onPress={onClose} />
+          <IconButton name="close" label="Close" onPress={onClose} />
         </View>
         {!q && suggestions.length ? (
           <Text variant="caption" muted style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.lg }}>

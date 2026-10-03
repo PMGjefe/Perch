@@ -1,19 +1,20 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, Switch, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, View } from 'react-native';
 import ReorderableList, { type ReorderableListRenderItemInfo, type ReorderableListReorderEvent, reorderItems } from 'react-native-reorderable-list';
 
 import { DraggableItemCard, useReorderablePan } from '@/components/ReorderableItems';
 import { SightingPickerModal } from '@/components/SightingPickerModal';
 import { SpeciesPicker } from '@/components/SpeciesPicker';
-import { BottomInset, Button, Chip, Input, Loading, Row, Text } from '@/components/ui';
+import { ErrorState } from '@/components/ErrorState';
+import { BottomInset, Button, Chip, Empty, Input, Loading, Row, SwitchRow, Text } from '@/components/ui';
 import { useAsync } from '@/hooks/useAsync';
 import { useUserId } from '@/lib/auth';
 import * as db from '@/lib/db';
 import { formatDate } from '@/lib/format';
 import { fetchList, replaceListItems, saveList } from '@/lib/social';
 import { speciesByCode } from '@/lib/taxonomy';
-import { radius, spacing, useTheme } from '@/lib/theme';
+import { spacing, useTheme } from '@/lib/theme';
 
 interface Draft {
   key: string;
@@ -41,17 +42,20 @@ export default function EditList() {
   const [sightingOpen, setSightingOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  useAsync(async () => {
+  const { data: loadedList, error: loadError, reload } = useAsync(async () => {
     if (isNew) return null;
-    const res = await fetchList(id);
-    if (res) {
-      setTitle(res.list.title);
-      setDescription(res.list.description);
-      setIsPublic(res.list.is_public);
-      setItems(res.items.map((it) => ({ key: it.id, species_code: it.species_code, sighting_id: it.sighting_id, note: it.note })));
+    try {
+      const res = await fetchList(id);
+      if (res) {
+        setTitle(res.list.title);
+        setDescription(res.list.description);
+        setIsPublic(res.list.is_public);
+        setItems(res.items.map((it) => ({ key: it.id, species_code: it.species_code, sighting_id: it.sighting_id, note: it.note })));
+      }
+      return res ?? 'missing';
+    } finally {
+      setLoaded(true);
     }
-    setLoaded(true);
-    return res;
   }, [id]);
 
   const { panGesture, onDragStart, onDragEnd } = useReorderablePan();
@@ -74,7 +78,7 @@ export default function EditList() {
   }, []);
 
   const renderItem = ({ item, index }: ReorderableListRenderItemInfo<Draft>) => {
-    const local = item.sighting_id ? db.getSighting(item.sighting_id) : null;
+    const local = item.sighting_id ? db.getSighting(item.sighting_id, userId) : null;
     const sp = speciesByCode(item.species_code ?? local?.species_code);
     return (
       <DraggableItemCard
@@ -106,6 +110,8 @@ export default function EditList() {
   };
 
   if (!loaded) return <Loading />;
+  if (loadError) return <ErrorState error={loadError} onRetry={reload} />;
+  if (loadedList === 'missing') return <Empty icon="eye-off-outline" title="Not available" body="This list is private or was deleted." />;
 
   // Header and footer are passed as elements (not component functions) so their Inputs keep
   // identity - and focus - across re-renders while typing.
@@ -113,15 +119,7 @@ export default function EditList() {
     <View style={{ gap: spacing.lg, marginBottom: spacing.sm }}>
       <Input label="Title" value={title} onChangeText={setTitle} placeholder="Birds of my commute" maxLength={80} />
       <Input label="Description" value={description} onChangeText={setDescription} placeholder="Optional" multiline maxLength={500} style={{ minHeight: 60, textAlignVertical: 'top' }} />
-      <Row style={{ justifyContent: 'space-between', backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md, borderWidth: 1, borderColor: colors.border }}>
-        <View style={{ flex: 1 }}>
-          <Text variant="label">Public</Text>
-          <Text variant="caption" muted>
-            Anyone can find and follow it. Private lists are only for you.
-          </Text>
-        </View>
-        <Switch value={isPublic} onValueChange={setIsPublic} trackColor={{ true: colors.accent }} />
-      </Row>
+      <SwitchRow label="Public" caption="Anyone can find and follow it. Private lists are only for you." value={isPublic} onValueChange={setIsPublic} />
 
       <View style={{ gap: spacing.xs }}>
         <Row style={{ justifyContent: 'space-between' }}>

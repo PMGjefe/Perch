@@ -28,7 +28,7 @@ export function SightingPickerModal({ visible, userId, onClose, onSelect }: { vi
           <View style={{ flex: 1 }}>
             <Input value={q} onChangeText={setQ} placeholder="Filter your sightings" autoFocus />
           </View>
-          <IconButton name="close" onPress={onClose} />
+          <IconButton name="close" label="Close" onPress={onClose} />
         </Row>
         <Text variant="caption" muted style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm }}>
           Only synced sightings can be added to a list.

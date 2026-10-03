@@ -6,11 +6,16 @@ import { Alert, KeyboardAvoidingView, Platform, Pressable, View } from 'react-na
 import MapView, { Circle, Marker } from 'react-native-maps';
 
 import { Comments } from '@/components/Comments';
+import { ErrorState } from '@/components/ErrorState';
+import { reportContent } from '@/components/ReportSheet';
 import { Photo } from '@/components/Photo';
 import { Avatar, BottomInset, Button, Empty, IconButton, Loading, Row, Screen, Text } from '@/components/ui';
 import { useAsync } from '@/hooks/useAsync';
 import { useLocalSighting } from '@/hooks/useLocalSightings';
 import { useUserId } from '@/lib/auth';
+import { DARK_MAP } from '@/lib/mapStyle';
+import { backOr } from '@/lib/nav';
+import { shareSighting } from '@/lib/share';
 import { haptic } from '@/lib/haptics';
 import * as db from '@/lib/db';
 import { formatDateTime } from '@/lib/format';
@@ -23,8 +28,8 @@ export default function SightingDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const userId = useUserId();
   const router = useRouter();
-  const { colors } = useTheme();
-  const local = useLocalSighting(id);
+  const { colors, dark } = useTheme();
+  const local = useLocalSighting(id, userId);
   const isOwner = !!local;
   const scrollRef = useAnimatedRef<Animated.ScrollView>();
   const offset = useScrollOffset(scrollRef);
@@ -67,14 +72,22 @@ export default function SightingDetail() {
         text: 'Delete',
         style: 'destructive',
         onPress: () => {
-          db.deleteSighting(id);
-          router.back();
+          backOr('/(tabs)/diary');
+          setTimeout(() => db.deleteSighting(id), 350);
         },
       },
     ]);
 
   if (!sighting) {
     if (remote.loading) return <Loading />;
+    if (remote.error) {
+      return (
+        <Screen>
+          <Stack.Screen options={{ title: '' }} />
+          <ErrorState error={remote.error} onRetry={remote.reload} />
+        </Screen>
+      );
+    }
     return (
       <Screen>
         <Stack.Screen options={{ title: '' }} />
@@ -91,14 +104,19 @@ export default function SightingDetail() {
       <Stack.Screen
         options={{
           title: sp?.common ?? '',
-          headerRight: isOwner
-            ? () => (
-                <Row gap={0}>
-                  <IconButton name="create-outline" onPress={() => router.push({ pathname: '/sighting/edit/[id]', params: { id } })} />
-                  <IconButton name="trash-outline" color={colors.danger} onPress={remove} />
-                </Row>
-              )
-            : undefined,
+          headerRight: () => (
+            <Row gap={0}>
+              <IconButton name="share-outline" label="Share" onPress={() => shareSighting(sighting)} />
+              {isOwner ? (
+                <>
+                  <IconButton name="create-outline" label="Edit sighting" onPress={() => router.push({ pathname: '/sighting/edit/[id]', params: { id } })} />
+                  <IconButton name="trash-outline" label="Delete sighting" color={colors.danger} onPress={remove} />
+                </>
+              ) : (
+                <IconButton name="flag-outline" label="Report" onPress={() => reportContent(userId, 'sighting', id)} />
+              )}
+            </Row>
+          ),
         }}
       />
       <Animated.ScrollView ref={scrollRef} style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={{ gap: spacing.lg, paddingBottom: spacing.xl }} scrollEventThrottle={16} keyboardShouldPersistTaps="handled" contentInsetAdjustmentBehavior="automatic">
@@ -169,6 +187,8 @@ export default function SightingDetail() {
               pitchEnabled={false}
               rotateEnabled={false}
               pointerEvents="none"
+              userInterfaceStyle={dark ? 'dark' : 'light'}
+              customMapStyle={dark ? DARK_MAP : undefined}
             >
               {sighting.location_fuzzed ? (
                 <Circle center={{ latitude: sighting.lat!, longitude: sighting.lng! }} radius={1000} fillColor={colors.accent + '33'} strokeColor={colors.accent} />
@@ -178,15 +198,13 @@ export default function SightingDetail() {
             </MapView>
           ) : null}
 
-          {eng ? (
-            <Row gap={spacing.lg}>
-              <Button title={`${eng.like_count}`} kind={eng.liked_by_me ? 'primary' : 'secondary'} icon={eng.liked_by_me ? 'heart' : 'heart-outline'} onPress={toggleLike} style={{ paddingVertical: 9 }} />
-              <Row gap={4}>
-                <Ionicons name="chatbubble-outline" size={18} color={colors.textMuted} />
-                <Text muted>{eng.comment_count}</Text>
-              </Row>
+          <Row gap={spacing.lg}>
+            <Button title={`${eng?.like_count ?? 0}`} kind={eng?.liked_by_me ? 'primary' : 'secondary'} icon={eng?.liked_by_me ? 'heart' : 'heart-outline'} onPress={toggleLike} disabled={!eng} style={{ paddingVertical: 9 }} />
+            <Row gap={4}>
+              <Ionicons name="chatbubble-outline" size={18} color={colors.textMuted} />
+              <Text muted>{eng?.comment_count ?? 0}</Text>
             </Row>
-          ) : null}
+          </Row>
 
           <Comments type="sighting" id={id} onCountChange={(d) => setEng((e) => (e ? { ...e, comment_count: e.comment_count + d } : e))} />
           <BottomInset />

@@ -1,11 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
-import { Modal, View } from 'react-native';
+import { Alert, Linking, Modal, View } from 'react-native';
 import MapView, { Marker, type MapPressEvent } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, Chip, IconButton, Input, Row, Text } from '@/components/ui';
-import { formatCoords, getCurrentLocation, type LatLng, reverseGeocode } from '@/lib/geo';
+import { useAuth } from '@/lib/auth';
+import { DARK_MAP } from '@/lib/mapStyle';
+import { formatCoords, getCurrentLocation, type LatLng, locationPermissionDenied, reverseGeocode } from '@/lib/geo';
 import { spacing, useTheme } from '@/lib/theme';
 
 interface Props {
@@ -20,7 +22,9 @@ interface Props {
 }
 
 export function LocationField({ value, placeName, onChange, onPlaceNameChange, status, hidePlaceName, label = 'Where' }: Props) {
-  const { colors } = useTheme();
+  const { colors, dark } = useTheme();
+  const { profile } = useAuth();
+  const home = profile?.home_lat != null && profile.home_lng != null ? { lat: profile.home_lat, lng: profile.home_lng } : null;
   const [mapOpen, setMapOpen] = useState(false);
   const [locating, setLocating] = useState(false);
 
@@ -28,7 +32,15 @@ export function LocationField({ value, placeName, onChange, onPlaceNameChange, s
     setLocating(true);
     const p = await getCurrentLocation();
     setLocating(false);
-    if (!p) return;
+    if (!p) {
+      if (await locationPermissionDenied()) {
+        Alert.alert('Location is off', 'Allow location access in Settings to drop the pin where you are.', [
+          { text: 'Not now', style: 'cancel' },
+          { text: 'Open Settings', onPress: () => Linking.openSettings() },
+        ]);
+      }
+      return;
+    }
     onChange(p);
     if (!placeName && !hidePlaceName) {
       const name = await reverseGeocode(p);
@@ -50,15 +62,15 @@ export function LocationField({ value, placeName, onChange, onPlaceNameChange, s
       <Text variant="caption" muted>
         {value ? formatCoords(value) : status ?? 'No coordinates'}
       </Text>
-      <MapPickerModal visible={mapOpen} initial={value} onClose={() => setMapOpen(false)} onPick={onChange} colors={colors} />
+      <MapPickerModal visible={mapOpen} initial={value} fallback={home} dark={dark} onClose={() => setMapOpen(false)} onPick={onChange} colors={colors} />
     </View>
   );
 }
 
-function MapPickerModal({ visible, initial, onClose, onPick, colors }: { visible: boolean; initial: LatLng | null; onClose: () => void; onPick: (p: LatLng) => void; colors: ReturnType<typeof useTheme>['colors'] }) {
+function MapPickerModal({ visible, initial, fallback, dark, onClose, onPick, colors }: { visible: boolean; initial: LatLng | null; fallback: LatLng | null; dark: boolean; onClose: () => void; onPick: (p: LatLng) => void; colors: ReturnType<typeof useTheme>['colors'] }) {
   const insets = useSafeAreaInsets();
   const [point, setPoint] = useState<LatLng | null>(initial);
-  const center = point ?? initial ?? { lat: 47.6, lng: -122.33 };
+  const center = point ?? initial ?? fallback ?? { lat: 20, lng: 0 };
 
   const onMapPress = (e: MapPressEvent) => {
     const { latitude, longitude } = e.nativeEvent.coordinate;
@@ -70,9 +82,11 @@ function MapPickerModal({ visible, initial, onClose, onPick, colors }: { visible
       <View style={{ flex: 1, backgroundColor: colors.bg }}>
         <MapView
           style={{ flex: 1 }}
-          initialRegion={{ latitude: center.lat, longitude: center.lng, latitudeDelta: initial ? 0.02 : 0.5, longitudeDelta: initial ? 0.02 : 0.5 }}
+          initialRegion={{ latitude: center.lat, longitude: center.lng, latitudeDelta: initial ? 0.02 : fallback ? 0.5 : 120, longitudeDelta: initial ? 0.02 : fallback ? 0.5 : 120 }}
           onPress={onMapPress}
           showsUserLocation
+          userInterfaceStyle={dark ? 'dark' : 'light'}
+          customMapStyle={dark ? DARK_MAP : undefined}
         >
           {point ? <Marker coordinate={{ latitude: point.lat, longitude: point.lng }} draggable onDragEnd={(e) => setPoint({ lat: e.nativeEvent.coordinate.latitude, lng: e.nativeEvent.coordinate.longitude })} pinColor={colors.accent} /> : null}
         </MapView>
@@ -83,7 +97,7 @@ function MapPickerModal({ visible, initial, onClose, onPick, colors }: { visible
               Tap to place, drag to adjust
             </Text>
           </View>
-          <IconButton name="close" onPress={onClose} style={{ backgroundColor: colors.surface, borderRadius: 999 }} />
+          <IconButton name="close" label="Close map" onPress={onClose} style={{ backgroundColor: colors.surface, borderRadius: 999 }} />
         </View>
         <View style={{ padding: spacing.lg, paddingBottom: insets.bottom + spacing.lg, backgroundColor: colors.bg }}>
           <Button

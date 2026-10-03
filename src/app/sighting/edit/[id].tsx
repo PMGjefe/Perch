@@ -11,7 +11,7 @@ export default function EditSighting() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const userId = useUserId();
   const router = useRouter();
-  const sighting = useLocalSighting(id);
+  const sighting = useLocalSighting(id, userId);
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>

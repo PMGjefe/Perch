@@ -7,6 +7,7 @@ import {
   type PressableProps,
   ScrollView,
   StyleSheet,
+  Switch,
   Text as RNText,
   TextInput,
   type TextInputProps,
@@ -57,6 +58,7 @@ export function Screen({
   if (scroll) {
     return (
       <ScrollView
+        {...rest}
         style={{ flex: 1, backgroundColor: colors.bg }}
         contentContainerStyle={[padded && { padding: spacing.lg }, style]}
         keyboardShouldPersistTaps="handled"
@@ -102,6 +104,9 @@ export function Button({
   const fg = kind === 'primary' || kind === 'danger' ? colors.onAccent : kind === 'ghost' ? colors.accent : colors.text;
   return (
     <Tap
+      accessibilityRole="button"
+      accessibilityLabel={title}
+      accessibilityState={{ disabled: !!disabled, busy: !!loading }}
       {...rest}
       scaleTo={0.96}
       disabled={disabled || loading}
@@ -126,20 +131,22 @@ export function Button({
   );
 }
 
-export function IconButton({ name, color, size = 22, style, ...rest }: PressableProps & { name: keyof typeof Ionicons.glyphMap; color?: string; size?: number }) {
+export function IconButton({ name, label, color, size = 22, style, ...rest }: PressableProps & { name: keyof typeof Ionicons.glyphMap; label: string; color?: string; size?: number }) {
   const { colors } = useTheme();
   return (
     <Pressable
-      hitSlop={8}
+      hitSlop={10}
+      accessibilityRole="button"
+      accessibilityLabel={label}
       {...rest}
-      style={({ pressed }) => [{ padding: spacing.sm, opacity: pressed ? 0.6 : 1 }, typeof style === 'function' ? undefined : style]}
+      style={({ pressed }) => [{ padding: spacing.sm, minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1 }, typeof style === 'function' ? undefined : style]}
     >
       <Ionicons name={name} size={size} color={color ?? colors.text} />
     </Pressable>
   );
 }
 
-export function Input({ style, label, ...rest }: TextInputProps & { label?: string }) {
+export const Input = React.forwardRef<TextInput, TextInputProps & { label?: string }>(function Input({ style, label, ...rest }, ref) {
   const { colors } = useTheme();
   return (
     <View style={{ gap: 6 }}>
@@ -149,7 +156,9 @@ export function Input({ style, label, ...rest }: TextInputProps & { label?: stri
         </Text>
       ) : null}
       <TextInput
+        ref={ref}
         placeholderTextColor={colors.textFaint}
+        accessibilityLabel={label ?? rest.placeholder}
         {...rest}
         style={[
           {
@@ -167,7 +176,7 @@ export function Input({ style, label, ...rest }: TextInputProps & { label?: stri
       />
     </View>
   );
-}
+});
 
 export function Row({ children, style, gap = spacing.sm, ...rest }: ViewProps & { gap?: number }) {
   return (
@@ -189,6 +198,10 @@ export function Chip({ label, active, onPress, icon }: { label: string; active?:
       onPress={onPress}
       scaleTo={0.94}
       feedback="select"
+      hitSlop={{ top: 8, bottom: 8 }}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ selected: !!active }}
       style={{
         paddingVertical: 7,
         paddingHorizontal: 14,
@@ -209,10 +222,10 @@ export function Avatar({ uri, name, size = 40 }: { uri?: string | null; name?: s
   const { colors } = useTheme();
   const initial = (name ?? '?').trim().charAt(0).toUpperCase() || '?';
   if (uri) {
-    return <Image source={{ uri }} style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: colors.surfaceAlt }} />;
+    return <Image source={{ uri }} accessible={false} style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: colors.surfaceAlt }} />;
   }
   return (
-    <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: colors.accentSoft, alignItems: 'center', justifyContent: 'center' }}>
+    <View accessible={false} style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: colors.accentSoft, alignItems: 'center', justifyContent: 'center' }}>
       <RNText style={{ color: colors.accent, fontFamily: fonts.displaySemi, fontSize: size * 0.46 }}>{initial}</RNText>
     </View>
   );
@@ -239,7 +252,7 @@ export function Empty({ icon = 'leaf-outline', title, body, action }: { icon?: k
 export function Loading() {
   const { colors } = useTheme();
   return (
-    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg }}>
       <ActivityIndicator color={colors.accent} />
     </View>
   );
@@ -269,6 +282,24 @@ export function StatRow({ label, value, strong }: { label: string; value: number
     <Row style={{ justifyContent: 'space-between' }}>
       <Text muted={!strong}>{label}</Text>
       <Text variant={strong ? 'heading' : 'body'}>{value}</Text>
+    </Row>
+  );
+}
+
+/** Label + caption on the left, a switch on the right, in a bordered card. */
+export function SwitchRow({ label, caption, value, onValueChange, disabled }: { label: string; caption?: string; value: boolean; onValueChange: (v: boolean) => void; disabled?: boolean }) {
+  const { colors } = useTheme();
+  return (
+    <Row style={{ justifyContent: 'space-between', backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border }}>
+      <View style={{ flex: 1, gap: 2 }}>
+        <Text variant="label">{label}</Text>
+        {caption ? (
+          <Text variant="caption" muted>
+            {caption}
+          </Text>
+        ) : null}
+      </View>
+      <Switch value={value} onValueChange={onValueChange} disabled={disabled} trackColor={{ true: colors.accent }} accessibilityLabel={label} />
     </Row>
   );
 }

@@ -2,17 +2,17 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Crypto from 'expo-crypto';
 import { Directory, File, Paths } from 'expo-file-system';
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Pressable, Switch, View } from 'react-native';
+import { Alert, Pressable, View } from 'react-native';
 
 import { DateTimeField } from '@/components/DateTimeField';
 import { LocationField } from '@/components/LocationField';
 import { PhotoField, type PickedPhoto } from '@/components/PhotoField';
 import { usePhotoUrl } from '@/lib/photos';
 import { SpeciesPicker } from '@/components/SpeciesPicker';
-import { BottomInset, Button, Chip, Input, Row, Text } from '@/components/ui';
+import { BottomInset, Button, Chip, Input, Row, SwitchRow, Text } from '@/components/ui';
 import { useLocalQuery } from '@/hooks/useLocalSightings';
 import * as db from '@/lib/db';
-import { getCurrentLocation, type LatLng, reverseGeocode } from '@/lib/geo';
+import { getLocationIfGranted, type LatLng, reverseGeocode } from '@/lib/geo';
 import { speciesByCode, type SpeciesEntry } from '@/lib/taxonomy';
 import { radius, spacing, useTheme } from '@/lib/theme';
 import type { Visibility } from '@/types/db';
@@ -48,7 +48,7 @@ export function SightingForm({ userId, existing, onSaved, resetKey }: Props) {
   const [note, setNote] = useState(existing?.note ?? '');
   const [visibility, setVisibility] = useState<Visibility>(existing?.visibility ?? 'public');
   const [sensitive, setSensitive] = useState(existing?.sensitive ?? false);
-  const [locStatus, setLocStatus] = useState<string | null>(existing ? null : 'Finding your location…');
+  const [locStatus, setLocStatus] = useState<string | null>(existing ? null : 'Tap “Current location” or pick on the map.');
   const [saving, setSaving] = useState(false);
   const touchedWhen = useRef(!!existing);
   const touchedWhere = useRef(!!existing);
@@ -57,10 +57,13 @@ export function SightingForm({ userId, existing, onSaved, resetKey }: Props) {
   // New sighting: auto-fill GPS once.
   useEffect(() => {
     if (existing) return;
+    // Only auto-fill when permission was already granted; the first prompt belongs to a user tap.
     let cancelled = false;
-    getCurrentLocation().then(async (p) => {
+    const timeout = setTimeout(() => !cancelled && setLocStatus('Location is taking a while. Pick on the map or keep going.'), 8000);
+    getLocationIfGranted().then(async (p) => {
+      clearTimeout(timeout);
       if (cancelled || touchedWhere.current) return;
-      if (!p) return setLocStatus('Location unavailable. Pick on the map or leave blank.');
+      if (!p) return;
       setWhere(p);
       setLocStatus(null);
       const name = await reverseGeocode(p);
@@ -68,6 +71,7 @@ export function SightingForm({ userId, existing, onSaved, resetKey }: Props) {
     });
     return () => {
       cancelled = true;
+      clearTimeout(timeout);
     };
   }, [existing, resetKey]);
 
@@ -193,17 +197,9 @@ export function SightingForm({ userId, existing, onSaved, resetKey }: Props) {
         </Row>
       </View>
 
-      <Row style={{ justifyContent: 'space-between', backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md, borderWidth: 1, borderColor: colors.border }}>
-        <View style={{ flex: 1, gap: 2 }}>
-          <Text variant="label">Sensitive location</Text>
-          <Text variant="caption" muted>
-            Nest, roost, rarity. Others see the sighting but never the pin.
-          </Text>
-        </View>
-        <Switch value={sensitive} onValueChange={setSensitive} trackColor={{ true: colors.accent }} />
-      </Row>
+      <SwitchRow label="Sensitive location" caption="Nest, roost, rarity. Others see the sighting but never the pin." value={sensitive} onValueChange={setSensitive} />
 
-      <Button title={existing ? 'Save changes' : 'Log it'} onPress={save} loading={saving} icon={existing ? undefined : 'checkmark'} />
+      <Button title={existing ? 'Save changes' : species ? 'Log it' : 'Pick a species first'} onPress={save} loading={saving} disabled={!species} icon={existing ? undefined : 'checkmark'} />
       <BottomInset />
     </View>
   );

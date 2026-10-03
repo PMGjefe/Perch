@@ -5,7 +5,7 @@ project_id = "perch"
 [api]
 enabled = true
 port = 54321
-schemas = ["public", "storage", "graphql_public"]
+schemas = ["public", "graphql_public"]
 extra_search_path = ["public", "extensions"]
 max_rows = 1000
 
@@ -28,10 +28,11 @@ file_size_limit = "10MiB"
 [auth]
 enabled = true
 site_url = "perch://"
-additional_redirect_urls = ["perch://auth/callback", "exp://127.0.0.1:8081/--/auth/callback"]
+additional_redirect_urls = ["perch://auth/callback", "exp://127.0.0.1:8081/--/auth/callback"] # drop the exp:// entry on the hosted project
 jwt_expiry = 3600
 enable_refresh_token_rotation = true
 enable_signup = true
+minimum_password_length = 8
 
 [auth.email]
 enable_signup = true
@@ -47,4 +48,3 @@ secret = "env(SUPABASE_AUTH_APPLE_SECRET)"
 enabled = true
 client_id = "env(SUPABASE_AUTH_GOOGLE_CLIENT_ID)"
 secret = "env(SUPABASE_AUTH_GOOGLE_SECRET)"
-skip_nonce_check = true

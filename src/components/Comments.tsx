@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
-import { Alert, Pressable, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, View } from 'react-native';
+
+import { ErrorState } from '@/components/ErrorState';
+import { reportContent } from '@/components/ReportSheet';
 
 import { Avatar, Button, Input, Row, Text } from '@/components/ui';
 import { useAsync } from '@/hooks/useAsync';
@@ -14,7 +17,7 @@ export function Comments({ type, id, onCountChange }: { type: TargetType; id: st
   const userId = useUserId();
   const [body, setBody] = useState('');
   const [busy, setBusy] = useState(false);
-  const { data, reload } = useAsync(async () => {
+  const { data, error, loading, reload } = useAsync(async () => {
     const comments = await fetchComments(type, id);
     const profiles = await fetchProfiles(comments.map((c) => c.user_id));
     return { comments, profiles };
@@ -57,6 +60,8 @@ export function Comments({ type, id, onCountChange }: { type: TargetType; id: st
   return (
     <View style={{ gap: spacing.md }}>
       <Text variant="subheading">Comments</Text>
+      {error && !data ? <ErrorState error={error} onRetry={reload} /> : null}
+      {loading && !data && !error ? <ActivityIndicator color={colors.accent} /> : null}
       {data?.comments.length === 0 ? (
         <Text variant="caption" muted>
           Nothing yet.
@@ -65,7 +70,19 @@ export function Comments({ type, id, onCountChange }: { type: TargetType; id: st
       {data?.comments.map((c) => {
         const p: PublicProfile | undefined = data.profiles.get(c.user_id);
         return (
-          <Pressable key={c.id} onLongPress={c.user_id === userId ? () => remove(c.id) : undefined}>
+          <Pressable
+            key={c.id}
+            accessibilityRole="button"
+            accessibilityHint="Long press for options"
+            onLongPress={() =>
+              c.user_id === userId
+                ? remove(c.id)
+                : Alert.alert('Comment', undefined, [
+                    { text: 'Report', onPress: () => reportContent(userId, 'comment', c.id) },
+                    { text: 'Cancel', style: 'cancel' },
+                  ])
+            }
+          >
             <Row style={{ alignItems: 'flex-start' }}>
               <Avatar uri={p?.avatar_url} name={p?.display_name || p?.username} size={30} />
               <View style={{ flex: 1, gap: 2 }}>

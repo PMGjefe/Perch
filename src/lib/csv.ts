@@ -115,8 +115,10 @@ function num(s: string | undefined): number | null {
 
 /** Parse an eBird or Merlin CSV into candidate sightings. Species are matched against the bundled taxonomy. */
 export function importCsv(text: string): ImportResult {
+  if (text.length > 25 * 1024 * 1024) throw new Error('That file is too large (25 MB max).');
   const rows = parseCsv(text);
   if (rows.length < 2) throw new Error('The file has no data rows.');
+  if (rows.length > 50_001) throw new Error('That file has more than 50,000 rows. Split it and import in parts.');
   const header = rows[0];
   const source = detectSource(header);
   if (!source) throw new Error('Unrecognised CSV. Expected an eBird "My eBird Data" export or a Merlin saved-birds export.');
@@ -149,7 +151,7 @@ export function importCsv(text: string): ImportResult {
       continue;
     }
     const when = parseDate(r[cDate] ?? '', cTime >= 0 ? r[cTime] ?? '' : '');
-    if (!when) {
+    if (!when || when.getTime() > Date.now() + 86_400_000) {
       skippedNoDate++;
       continue;
     }

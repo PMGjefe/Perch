@@ -33,6 +33,13 @@
 --   wooduc: Joshua J. Cotten, https://unsplash.com/photos/green-brown-and-black-duck-c6hbV7t87sQ
 --   yerwar: anish lakkapragada, https://unsplash.com/photos/a-small-bird-perched-on-a-branch-of-a-tree-JVPXDLPQuOI
 
+-- Refuse to run against a project that already has real users.
+do $$ begin
+  if exists (select 1 from auth.users where email not like '%@perch.app') then
+    raise exception 'seed.sql is for local development only';
+  end if;
+end $$;
+
 do $$
 declare
   dev uuid := '11111111-1111-4111-8111-111111111111';

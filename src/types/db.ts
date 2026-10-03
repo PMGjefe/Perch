@@ -11,6 +11,7 @@ export interface Profile {
   home_lat: number | null;
   home_lng: number | null;
   hide_home: boolean;
+  approve_followers: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -93,6 +94,7 @@ export interface ProfileStats {
   sighting_count: number;
   list_count: number;
   is_followed_by_me: boolean;
+  follow_requested: boolean;
 }
 
 export interface LifeListRow {

@@ -86,3 +86,69 @@ do $$ begin
   if (select count(*) from storage.objects where bucket_id = 'sighting-photos') <> 3 then raise exception 'owner should see all own photos'; end if;
 end $$;
 reset role;
+
+-- follow approval: pending follows grant nothing
+set role authenticated;
+select set_config('request.jwt.claim.sub', '11111111-1111-4111-8111-111111111111', false) \gset
+update public.profiles set approve_followers = true where id = '11111111-1111-4111-8111-111111111111';
+-- wren already follows dev (accepted, from seed); a new account would be pending. Simulate by flipping wren's edge to pending.
+reset role;
+update public.follows set status = 'pending' where follower_id = '22222222-2222-4222-8222-222222222222' and followee_id = '11111111-1111-4111-8111-111111111111';
+set role authenticated;
+select set_config('request.jwt.claim.sub', '22222222-2222-4222-8222-222222222222', false) \gset
+do $$ begin
+  if exists (select 1 from public.public_sightings where id = 'c0000000-0000-4000-8000-000000000009') then raise exception 'pending follower sees followers-only sighting'; end if;
+  if (select follow_requested from public.profile_stats('11111111-1111-4111-8111-111111111111')) is not true then raise exception 'follow_requested flag'; end if;
+  if (select followers from public.profile_stats('11111111-1111-4111-8111-111111111111')) <> 0 then raise exception 'pending counted as follower'; end if;
+  -- likes on content wren cannot see are invisible
+  if exists (select 1 from public.likes where target_id = 'c0000000-0000-4000-8000-000000000027') then raise exception 'like on private sighting visible'; end if;
+  -- is_blocked only answers about me
+  if public.is_blocked('11111111-1111-4111-8111-111111111111', '33333333-3333-4333-8333-333333333333') then raise exception 'is_blocked leaks third parties'; end if;
+end $$;
+-- dev accepts
+select set_config('request.jwt.claim.sub', '11111111-1111-4111-8111-111111111111', false) \gset
+update public.follows set status = 'accepted' where followee_id = '11111111-1111-4111-8111-111111111111' and follower_id = '22222222-2222-4222-8222-222222222222';
+select set_config('request.jwt.claim.sub', '22222222-2222-4222-8222-222222222222', false) \gset
+do $$ begin
+  if not exists (select 1 from public.public_sightings where id = 'c0000000-0000-4000-8000-000000000009') then raise exception 'accepted follower cannot see followers-only sighting'; end if;
+end $$;
+-- content owner can delete a comment on their sighting
+select set_config('request.jwt.claim.sub', '11111111-1111-4111-8111-111111111111', false) \gset
+do $$ begin
+  delete from public.comments where target_id = 'c0000000-0000-4000-8000-000000000022' and user_id = '22222222-2222-4222-8222-222222222222';
+  if not found then raise exception 'owner could not remove comment on own sighting'; end if;
+end $$;
+-- created_at is server stamped
+do $$ declare c timestamptz; begin
+  insert into public.lists (id, user_id, title, created_at) values ('aaaaaaaa-0000-4000-8000-000000000099', '11111111-1111-4111-8111-111111111111', 'stamp test', '2000-01-01') returning created_at into c;
+  if c < now() - interval '1 minute' then raise exception 'created_at not stamped'; end if;
+end $$;
+reset role;
+
+-- blocks hide people from each other
+set role authenticated;
+select set_config('request.jwt.claim.sub', '22222222-2222-4222-8222-222222222222', false) \gset
+insert into public.blocks (blocker_id, blocked_id) values ('22222222-2222-4222-8222-222222222222', '11111111-1111-4111-8111-111111111111');
+do $$ begin
+  if exists (select 1 from public.public_sightings where user_id = '11111111-1111-4111-8111-111111111111') then raise exception 'blocked user still visible'; end if;
+  if exists (select 1 from public.search_profiles('dev')) then raise exception 'blocked user still searchable'; end if;
+  if exists (select 1 from public.feed(now(), 100) where (payload->>'user_id') = '11111111-1111-4111-8111-111111111111') then raise exception 'blocked user still in feed'; end if;
+end $$;
+select set_config('request.jwt.claim.sub', '11111111-1111-4111-8111-111111111111', false) \gset
+do $$ begin
+  if exists (select 1 from public.public_sightings where user_id = '22222222-2222-4222-8222-222222222222') then raise exception 'block is not mutual'; end if;
+  if exists (select 1 from public.blocks) then raise exception 'blocked party can see the block row'; end if;
+end $$;
+-- reports are write-only
+insert into public.reports (reporter_id, target_type, target_id, reason) values ('11111111-1111-4111-8111-111111111111', 'sighting', 'd0000000-0000-4000-8000-000000000001', 'test');
+do $$ begin
+  if exists (select 1 from public.reports) then raise exception 'reports readable by users'; end if;
+end $$;
+-- account deletion removes everything
+select public.delete_account();
+reset role;
+do $$ begin
+  if exists (select 1 from auth.users where id = '11111111-1111-4111-8111-111111111111') then raise exception 'account not deleted'; end if;
+  if exists (select 1 from public.sightings where user_id = '11111111-1111-4111-8111-111111111111') then raise exception 'sightings survived deletion'; end if;
+  if exists (select 1 from storage.objects where name like '11111111-1111-4111-8111-111111111111/%') then raise exception 'photos survived deletion'; end if;
+end $$;
