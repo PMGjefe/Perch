@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useMemo, useState } from 'react';
-import { FlatList, View } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { AppState, FlatList, View } from 'react-native';
 
 import { Filters } from '@/components/Filters';
 import { SightingCard } from '@/components/SightingCard';
@@ -13,7 +13,7 @@ import { useLocalQuery, useLocalSightings } from '@/hooks/useLocalSightings';
 import { useAuth, useUserId } from '@/lib/auth';
 import * as db from '@/lib/db';
 import { haversineM } from '@/lib/geo';
-import { greeting, groupOutings } from '@/lib/insights';
+import { greeting, groupOutings, outingLine } from '@/lib/insights';
 import { usePrefetchPhotoUrls } from '@/lib/photos';
 import { formatDay, formatLongDay, plural } from '@/lib/format';
 import { spacing, useTheme } from '@/lib/theme';
@@ -43,41 +43,36 @@ export default function DiaryScreen() {
   const fuzzPreview = (s: { lat: number | null; lng: number | null }) => !!home && s.lat != null && s.lng != null && haversineM({ lat: s.lat, lng: s.lng }, home) <= 500;
 
   // Masthead: today's date, a light-aware greeting, and where you last were. Filters swap the greeting for the count.
-  const now = new Date();
-  const todayKey = db.localDay(now.toISOString());
+  const now = useMastheadClock();
   const filtered = year != null || place != null;
-  const latest = outings[0];
-  let outingLine: string | null = null;
-  if (!filtered && latest) {
-    const where = latest.place ? ` at ${latest.place}` : '';
-    const species = plural(latest.speciesCount, 'species', 'species');
-    if (latest.day === todayKey) outingLine = `Out today · ${species} so far${where}`;
-    else {
-      const day = formatDay(latest.sightings[0].observed_at, now);
-      outingLine = `Last outing ${day === 'Yesterday' ? 'yesterday' : day} · ${species}${where}`;
-    }
-  }
+  const line = filtered ? null : outingLine(outings[0], now);
 
   const header = (
     <View style={{ backgroundColor: colors.bg }}>
-      <Row style={{ justifyContent: 'space-between', alignItems: 'flex-start', paddingHorizontal: spacing.lg, paddingTop: spacing.sm }}>
-        <View style={{ flex: 1, gap: 2 }}>
-          <Text variant="title" accessibilityRole="header">
-            {formatLongDay(now)}
-          </Text>
-          <Text muted>{filtered ? `${plural(sightings.length, 'sighting')}${year ? ` in ${year}` : ''}${place ? ` at ${place}` : ''}` : greeting(now)}</Text>
-          {outingLine ? (
-            <Text variant="caption" faint>
-              {outingLine}
-            </Text>
-          ) : null}
-        </View>
-        <Row style={{ minHeight: 36 }}>
-          <SyncDot />
-          <Chip label="List" icon="list" active={mode === 'list'} onPress={() => setMode('list')} />
-          <Chip label="Map" icon="map" active={mode === 'map'} onPress={() => setMode('map')} />
+      <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm, gap: 2 }}>
+        {/* The date owns the full width: "Wednesday 30 September" is 383pt in Fraunces at 32pt, wider than any
+            iPhone's content area, so the longest few days of the year shrink a touch instead of wrapping. The type
+            multiplier is capped so a shrink is always enough and the date never truncates under large text. */}
+        <Text variant="title" accessibilityRole="header" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} maxFontSizeMultiplier={1.2}>
+          {formatLongDay(now)}
+        </Text>
+        <Row style={{ justifyContent: 'space-between' }}>
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text muted>{filtered ? `${plural(sightings.length, 'sighting')}${year ? ` in ${year}` : ''}${place ? ` at ${place}` : ''}` : greeting(now)}</Text>
+            {line ? (
+              <Text variant="caption" faint>
+                {line}
+              </Text>
+            ) : null}
+          </View>
+          {/* Fixed at the SyncDot's height so the chips hold still when a backup starts. */}
+          <Row style={{ height: 44 }}>
+            <SyncDot />
+            <Chip label="List" icon="list" active={mode === 'list'} onPress={() => setMode('list')} />
+            <Chip label="Map" icon="map" active={mode === 'map'} onPress={() => setMode('map')} />
+          </Row>
         </Row>
-      </Row>
+      </View>
       <Filters years={years} places={places} year={year} place={place} onYear={setYear} onPlace={setPlace} />
     </View>
   );
@@ -138,4 +133,25 @@ export default function DiaryScreen() {
       />
     </View>
   );
+}
+
+/**
+ * "Now" for the masthead. A Diary left open across midnight, or from night into the dawn chorus, would
+ * otherwise keep the old date and greeting until something else re-rendered. Refreshes when the app comes
+ * back to the foreground and at the top of each hour, which is as often as the date or the greeting can change.
+ */
+function useMastheadClock(): Date {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const app = AppState.addEventListener('change', (s) => {
+      if (s === 'active') setNow(new Date());
+    });
+    const nextHour = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours() + 1, 0, 1);
+    const tick = setTimeout(() => setNow(new Date()), Math.max(1000, nextHour.getTime() - Date.now()));
+    return () => {
+      app.remove();
+      clearTimeout(tick);
+    };
+  }, [now]);
+  return now;
 }

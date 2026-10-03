@@ -13,13 +13,16 @@ const device = Platform.OS === 'ios' ? (Platform.isPad ? 'iPad' : 'iPhone') : 'p
  * One quiet glyph in the diary masthead. Nothing at all when everything is in your account;
  * a breathing cloud while backing up; a still cloud when something is only on this device;
  * a warning when the last backup failed. Tap any of them to try again.
+ *
+ * Order matters: a failed push leaves its rows dirty, so `pending` stays above zero. The failure
+ * has to win over the pending count or the warning could never show.
  */
 export function SyncDot() {
   const { syncing, pending, lastError, sync } = useSyncState();
   const { colors } = useTheme();
   if (!syncing && !pending && !lastError) return null;
 
-  const label = syncing ? 'Backing up' : pending > 0 ? `${pending} saved on this ${device}, not yet in your account` : 'Backup failed, tap to try again';
+  const label = syncing ? 'Backing up' : lastError ? 'Backup failed, tap to try again' : `${pending} saved on this ${device}, not yet in your account`;
 
   return (
     <Pressable
@@ -27,6 +30,7 @@ export function SyncDot() {
       hitSlop={8}
       accessibilityRole="button"
       accessibilityLabel={label}
+      accessibilityHint={syncing || lastError ? undefined : 'Backs up now'}
       accessibilityState={{ busy: syncing }}
       style={({ pressed }) => ({ width: 44, height: 44, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1 })}
     >
@@ -34,10 +38,10 @@ export function SyncDot() {
         <Breathe>
           <Ionicons name="cloud-upload-outline" size={20} color={colors.accent} />
         </Breathe>
-      ) : pending > 0 ? (
-        <Ionicons name="cloud-outline" size={20} color={colors.textMuted} />
-      ) : (
+      ) : lastError ? (
         <Ionicons name="alert-circle-outline" size={20} color={colors.danger} />
+      ) : (
+        <Ionicons name="cloud-outline" size={20} color={colors.textMuted} />
       )}
     </Pressable>
   );

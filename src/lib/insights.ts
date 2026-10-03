@@ -1,9 +1,11 @@
 // Pure helpers that turn a user's sightings into stories: outings, seasonality, a year recap.
 import { localDay } from '@/lib/dates';
+import { formatDay, plural } from '@/lib/format';
 import { haversineM } from '@/lib/geo';
 import type { Sighting } from '@/types/db';
 
 export const MONTHS_SHORT = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
+// format.ts keeps a module-local copy of this (formatLongDay was append-only); fold them in the header cleanup pass.
 export const MONTHS_LONG = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
 export interface Outing<S extends Sighting = Sighting> {
@@ -115,7 +117,10 @@ export function daylight(date = new Date()): number {
   return 0;
 }
 
-/** Light-aware one-liner for the diary masthead. Dawn and dusk are when birders are out; say so. */
+/**
+ * Light-aware one-liner for the diary masthead. Dawn and dusk are when birders are out; say so.
+ * log.tsx still carries its own copy of this; point it here in the same cleanup pass as MONTHS_LONG.
+ */
 export function greeting(now = new Date()): string {
   const d = daylight(now);
   const h = now.getHours();
@@ -123,4 +128,25 @@ export function greeting(now = new Date()): string {
   if (d < 1 && h < 12) return 'Dawn chorus hours.';
   if (d < 1) return 'Golden hour. Roost flights and late songs.';
   return 'What did you see?';
+}
+
+/** The newest outing, as the masthead needs it. groupOutings keeps outings newest first, so pass `outings[0]`. */
+export interface LatestOuting {
+  day: string; // YYYY-MM-DD local
+  place: string | null;
+  speciesCount: number;
+  sightings: Pick<Sighting, 'observed_at'>[]; // newest first
+}
+
+/**
+ * The masthead's faint third line: how today is going so far, or when you were last out.
+ * Null when nothing has been logged yet.
+ */
+export function outingLine(latest: LatestOuting | undefined, now = new Date()): string | null {
+  if (!latest) return null;
+  const where = latest.place ? ` at ${latest.place}` : '';
+  const species = plural(latest.speciesCount, 'species', 'species');
+  if (latest.day === localDay(now.toISOString())) return `Out today · ${species} so far${where}`;
+  const day = formatDay(latest.sightings[0].observed_at, now);
+  return `Last outing ${day === 'Yesterday' ? 'yesterday' : day} · ${species}${where}`;
 }
