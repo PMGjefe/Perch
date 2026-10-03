@@ -8,8 +8,20 @@ import { SightingForm } from '@/components/SightingForm';
 import { Screen, Text } from '@/components/ui';
 import { useUserId } from '@/lib/auth';
 import * as db from '@/lib/db';
+import { daylight } from '@/lib/insights';
 import { speciesByCode } from '@/lib/taxonomy';
 import { spacing } from '@/lib/theme';
+
+/** Light-aware one-liner. Dawn and dusk are when birders are out; say so. */
+function greeting(): string {
+  const now = new Date();
+  const d = daylight(now);
+  const h = now.getHours();
+  if (d === 0) return h < 5 ? 'Owls, nightjars, and the first chorus soon.' : 'Nocturnal flight calls count too.';
+  if (d < 1 && h < 12) return 'Dawn chorus hours. Works offline, syncs later.';
+  if (d < 1) return 'Golden hour. Roost flights and late songs.';
+  return 'Works offline. Syncs when you are back online.';
+}
 
 export default function LogScreen() {
   const userId = useUserId();
@@ -34,7 +46,7 @@ export default function LogScreen() {
       <Screen scroll style={{ paddingTop: insets.top + spacing.md, gap: spacing.lg }}>
         <View>
           <Text variant="title">Log a bird</Text>
-          <Text muted>Works offline. Syncs when you are back online.</Text>
+          <Text muted>{greeting()}</Text>
         </View>
         <SightingForm
           key={resetKey}

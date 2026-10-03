@@ -12,6 +12,7 @@ import { useLocalQuery, useLocalSightings } from '@/hooks/useLocalSightings';
 import { useUserId } from '@/lib/auth';
 import * as db from '@/lib/db';
 import { formatDate } from '@/lib/format';
+import { MONTHS_SHORT, monthHistogram } from '@/lib/insights';
 import { speciesByCode } from '@/lib/taxonomy';
 import { fonts, radius, spacing, useTheme } from '@/lib/theme';
 
@@ -28,6 +29,8 @@ export default function SpeciesScreen() {
   const rank = useMemo(() => (first ? life.filter((e) => e.first_seen <= first.observed_at).length : 0), [life, first]);
   const places = useMemo(() => new Set(sightings.map((s) => s.place_name).filter(Boolean)).size, [sightings]);
   const withPins = sightings.filter((s) => s.lat != null);
+  const months = useMemo(() => monthHistogram(sightings), [sightings]);
+  const maxMonth = Math.max(1, ...months);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -61,8 +64,27 @@ export default function SpeciesScreen() {
                 </Row>
               </Rise>
             ) : null}
-            {withPins.length ? (
+            {sightings.length > 1 ? (
               <Rise index={2}>
+                <View style={{ gap: spacing.sm }}>
+                  <Text variant="label" muted>
+                    When you see it
+                  </Text>
+                  <Row gap={4} style={{ alignItems: 'flex-end', height: 52 }}>
+                    {months.map((c, i) => (
+                      <View key={i} style={{ flex: 1, alignItems: 'center', gap: 4 }}>
+                        <View style={{ width: '100%', height: Math.max(3, (c / maxMonth) * 36), borderRadius: 3, backgroundColor: c ? colors.accent : colors.border, opacity: c ? 0.35 + 0.65 * (c / maxMonth) : 1 }} />
+                        <Text variant="caption" faint style={{ fontSize: 10 }}>
+                          {MONTHS_SHORT[i]}
+                        </Text>
+                      </View>
+                    ))}
+                  </Row>
+                </View>
+              </Rise>
+            ) : null}
+            {withPins.length ? (
+              <Rise index={3}>
                 <View style={{ height: 200, borderRadius: radius.lg, overflow: 'hidden' }}>
                   <SightingsMap sightings={withPins} onPress={(id) => router.push({ pathname: '/sighting/[id]', params: { id } })} />
                 </View>

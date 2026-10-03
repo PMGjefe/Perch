@@ -76,6 +76,7 @@ function Root() {
         <Stack.Screen name="user/[id]/index" options={{ title: '' }} />
         <Stack.Screen name="user/[id]/followers" options={{ title: '' }} />
         <Stack.Screen name="species/[code]" options={{ title: '' }} />
+        <Stack.Screen name="year/[year]" options={{ headerShown: false, presentation: 'fullScreenModal', animation: 'fade' }} />
       </Stack>
     </>
   );

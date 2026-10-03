@@ -2,9 +2,12 @@ import { Link, useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback } from 'react';
 import { Alert, Pressable, View } from 'react-native';
 
+import { ErrorState } from '@/components/ErrorState';
 import { ListCard } from '@/components/ListCard';
+import { Skeleton } from '@/components/Skeleton';
+import { useSyncState } from '@/components/SyncProvider';
 import { ProfileHeader } from '@/components/ProfileHeader';
-import { BottomInset, Button, Chip, Empty, IconButton, Row, Screen, Section, Text } from '@/components/ui';
+import { BottomInset, Button, Chip, Empty, IconButton, Loading, Row, Screen, Section, Text } from '@/components/ui';
 import { useAsync } from '@/hooks/useAsync';
 import { useLocalQuery } from '@/hooks/useLocalSightings';
 import { useAuth, useUserId } from '@/lib/auth';
@@ -15,11 +18,12 @@ import { DEFAULT_USERNAME } from '@/lib/validation';
 
 export default function MeScreen() {
   const userId = useUserId();
-  const { profile, signOut } = useAuth();
+  const { profile, loading: authLoading, refreshProfile, signOut } = useAuth();
+  const { pending } = useSyncState();
   const router = useRouter();
   const { colors } = useTheme();
   const counts = useLocalQuery(() => db.stats(userId), [userId]);
-  const { data, reload } = useAsync(async () => {
+  const { data, error, loading, reload } = useAsync(async () => {
     const [stats, lists, followed] = await Promise.all([fetchProfileStats(userId), fetchLists(userId), fetchFollowedLists(userId)]);
     return { stats, lists, followed };
   }, [userId]);
@@ -31,12 +35,26 @@ export default function MeScreen() {
   );
 
   const confirmSignOut = () =>
-    Alert.alert('Sign out?', 'Unsynced sightings stay on this device until you sign back in.', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Sign out', style: 'destructive', onPress: () => signOut() },
-    ]);
+    pending > 0
+      ? Alert.alert('Sign out?', `${pending} sighting${pending === 1 ? '' : 's'} have not synced yet. Signing out and clearing this device would lose them.`, [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Keep them, sign out', onPress: () => signOut({ keepLocal: true }) },
+          { text: 'Clear and sign out', style: 'destructive', onPress: () => signOut() },
+        ])
+      : Alert.alert('Sign out?', 'Your sightings are safe in your account and will be removed from this device.', [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Sign out', style: 'destructive', onPress: () => signOut() },
+        ]);
 
-  if (!profile) return null;
+  if (!profile) {
+    if (authLoading) return <Loading />;
+    return (
+      <Screen>
+        <ErrorState error="Could not load your profile" onRetry={refreshProfile} />
+        <Button title="Sign out" kind="ghost" onPress={() => signOut({ keepLocal: true })} />
+      </Screen>
+    );
+  }
 
   return (
     <Screen scroll style={{ gap: spacing.xl }}>
@@ -44,7 +62,7 @@ export default function MeScreen() {
         profile={profile}
         stats={data?.stats ?? null}
         localCounts={counts}
-        right={<IconButton name="settings-outline" onPress={() => router.push('/settings')} />}
+        right={<IconButton name="settings-outline" label="Settings" onPress={() => router.push('/settings')} />}
       />
       {DEFAULT_USERNAME.test(profile.username) ? (
         <Pressable onPress={() => router.push('/settings')} style={{ backgroundColor: colors.accentSoft, borderRadius: 14, padding: spacing.md }}>
@@ -59,11 +77,18 @@ export default function MeScreen() {
       <Row>
         <Chip label="Find people" icon="search" onPress={() => router.push('/search')} />
         <Chip label="Import CSV" icon="download-outline" onPress={() => router.push('/settings/import')} />
-        <Chip label="Edit profile" icon="create-outline" onPress={() => router.push('/settings')} />
+        <Chip label={`${new Date().getFullYear()} in birds`} icon="sparkles-outline" onPress={() => router.push({ pathname: '/year/[year]', params: { year: String(new Date().getFullYear()) } })} />
       </Row>
 
+      {error ? <ErrorState error={error} onRetry={reload} /> : null}
+
       <Section title="My lists" right={<Button title="New" kind="ghost" icon="add" onPress={() => router.push({ pathname: '/list/edit/[id]', params: { id: 'new' } })} style={{ paddingVertical: 4, paddingHorizontal: spacing.sm }} />}>
-        {data?.lists.length === 0 ? (
+        {loading && !data ? (
+          <View style={{ gap: spacing.md }}>
+            <Skeleton height={96} round={18} />
+            <Skeleton height={96} round={18} />
+          </View>
+        ) : data?.lists.length === 0 ? (
           <Empty icon="list-outline" title="No lists yet" body="Lists are titled, ordered collections: “Birds of my commute”, “Best of 2025”." />
         ) : (
           <View style={{ gap: spacing.md }}>{data?.lists.map((l) => <ListCard key={l.id} list={l} />)}</View>

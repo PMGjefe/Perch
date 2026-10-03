@@ -21,7 +21,10 @@ See [PLAN.md](PLAN.md) for the data model, screens and folder structure.
 | Map with privacy: home fuzzing within 500 m, per-sighting sensitive flag | `supabase/migrations/0003_security.sql` (`public_sightings` view), `src/app/settings` |
 | Social: follow, chronological feed, likes, comments. No ranking | `src/app/(tabs)/feed.tsx`, `src/app/user/` |
 | Import eBird "My eBird Data" and Merlin CSV, deduped | `src/lib/csv.ts`, `src/app/settings/import.tsx` |
-| Profile: photo, bio, counts, lists, followers | `src/app/(tabs)/me.tsx`, `src/app/user/[id]` |
+| Profile: photo, bio, counts, lists, followers; follower approval; species in common with a friend | `src/app/(tabs)/me.tsx`, `src/app/user/[id]` |
+| Year in Birds: swipeable recap of a year (numbers, lifers, seasons, patch, first and last bird), shareable without locations | `src/app/year/[year].tsx`, `src/lib/insights.ts` |
+| Outings in the diary (same day, same patch), seasonality strip per species, light-aware copy | `src/lib/insights.ts` |
+| Safety: block, report (sightings, lists, comments, people), delete account | `supabase/migrations/0006_moderation.sql`, `src/components/ReportSheet.tsx` |
 
 ## Setup
 
@@ -54,8 +57,9 @@ Supabase CLI.
    ```
    Or paste each file from `supabase/migrations/` into the SQL editor in order
    (`0001_schema.sql`, `0002_species_data.sql`, `0003_security.sql`).
-3. Seed the dev account (optional, recommended so screens are not empty). In the SQL
-   editor run `supabase/seed.sql`. It creates:
+3. Seed the dev account (**local stack only**; it creates accounts with a known password
+   and refuses to run against a project that has real users). With the local stack,
+   `supabase db reset` applies it. It creates:
 
    | account | password | username |
    |---|---|---|
@@ -65,9 +69,11 @@ Supabase CLI.
    `dev` has 30 sightings around Seattle, two lists, and follows `wren_k` (8 sightings
    in Portland, one list), with likes and comments between them.
 4. Auth settings (Dashboard → Authentication → URL Configuration): add
-   `perch://auth/callback` and, for Expo Go, `exp://127.0.0.1:8081/--/auth/callback`
-   to the redirect URLs.
-5. Storage: the migration creates a public bucket `sighting-photos`. Nothing else to do.
+   `perch://auth/callback` to the redirect URLs (and, only while developing in Expo Go,
+   `exp://127.0.0.1:8081/--/auth/callback`; remove it before launch). Google sign-in uses
+   the PKCE flow, so no tokens travel in the redirect.
+5. Storage: the migrations create a private `sighting-photos` bucket and a public `avatars`
+   bucket with their policies. Nothing else to do.
 
 **Local stack (Docker)**
 
@@ -103,8 +109,9 @@ except Sign in with Apple, which needs a development build:
 npx expo run:ios       # or: npx eas-cli build --profile development
 ```
 
-Android maps in a development build need a Google Maps key in
-`GOOGLE_MAPS_ANDROID_API_KEY` (Expo Go ships its own).
+Android maps in a development build need a Google Maps key in the
+`GOOGLE_MAPS_ANDROID_API_KEY` environment variable at build time (read by `app.config.ts`;
+Expo Go ships its own). Restrict the key to the app's package name and signing SHA.
 
 ## Design
 
@@ -149,6 +156,16 @@ which
 Owners always see their own exact data. Home coordinates live on `profiles`, which is
 only readable by its owner; everyone else reads `public_profiles`.
 
+Followers-only sightings are gated on **accepted** follows. With **Approve followers** on
+(`profiles.approve_followers`), a new follow is created as `pending` and the followee
+accepts or declines it from their followers screen; until then the follower sees only
+public rows. Blocking removes the follow in both directions and hides each person's
+content from the other.
+
+Photos are re-encoded on the device before upload (`expo-image-manipulator`), which drops
+every EXIF tag, GPS included. The EXIF date and location are read first to prefill the
+form, then discarded with the original file.
+
 Photos follow the same rules: the storage policy on `sighting-photos` only serves an object
 to its owner or to someone for whom the sighting appears in `public_sightings`, so making a
 sighting private also hides its photo. The app fetches them through signed URLs.
@@ -169,6 +186,7 @@ Expo packages, `@supabase/supabase-js` and `react-native-maps`, plus:
   (inline compact picker on iOS, system dialogs on Android). Bundled with Expo Go.
 - `expo-font` + `@expo-google-fonts/fraunces` and `@expo-google-fonts/inter`, `expo-haptics`,
   `expo-blur`, `expo-linear-gradient` for type, feedback and visual polish.
+- `expo-image-manipulator` to strip metadata and downscale photos before upload.
 - `react-native-reorderable-list` for drag-and-drop reordering in the list editor, with its
   peers `react-native-reanimated` and `react-native-worklets` (both Expo-bundled and in Expo
   Go; `babel-preset-expo` registers the worklets plugin automatically).
@@ -181,6 +199,9 @@ AsyncStorage. Dev tooling: `eslint` + `eslint-config-expo`.
 ## Known limits of the MVP
 
 - Sightings cannot be dated in the future; a photo whose camera clock is ahead is set to now.
+- Reports land in the `reports` table (write-only from the app). Reviewing them is a
+  dashboard job for now; there is no in-app moderation queue.
+- CSV imports are capped at 25 MB and 50,000 rows per file.
 - Reordering a list is long-press-and-drag (with "Move up"/"Move down" screen-reader actions);
   the web build shows the date read-only since the picker is native-only.
 - Merlin's export format is detected from its header (common name, date, location…);

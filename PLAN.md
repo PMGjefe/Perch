@@ -21,15 +21,17 @@ All tables have row-level security. `auth.uid()` is the caller.
 
 | table         | key columns                                                                                                   | notes |
 |---------------|---------------------------------------------------------------------------------------------------------------|-------|
-| `profiles`    | `id` (= auth.users.id), `username`, `display_name`, `avatar_url`, `bio`, `home_lat`, `home_lng`, `hide_home`  | created by trigger on sign-up. Home coordinates are readable only by the owner (exposed via `public_profiles` view). |
+| `profiles`    | `id` (= auth.users.id), `username`, `display_name`, `avatar_url`, `bio`, `home_lat`, `home_lng`, `hide_home`, `approve_followers` | created by trigger on sign-up. Home coordinates are readable only by the owner (exposed via `public_profiles` view). |
 | `species`     | `code` (eBird species code), `common_name`, `scientific_name`, `family`, `family_common`, `taxonomic_order`   | bundled eBird/Clements v2025 taxonomy, species only (~11k rows). Read-only. Also shipped in the app as JSON for offline type-ahead. |
 | `sightings`   | `id` (client-generated uuid), `user_id`, `species_code`, `observed_at`, `lat`, `lng`, `place_name`, `photo_path`, `note`, `visibility` (`public`/`followers`/`private`), `sensitive`, `source` (`app`/`ebird`/`merlin`), `source_ref`, `updated_at` | RLS: owner has full access. Other users never read the base table; they read `public_sightings`. |
 | `lists`       | `id`, `user_id`, `title`, `description`, `is_public`                                                          | |
 | `list_items`  | `id`, `list_id`, `position`, `species_code` or `sighting_id`, `note`                                          | exactly one of species/sighting set |
-| `follows`     | `follower_id`, `followee_id`                                                                                  | user follows user |
+| `follows`     | `follower_id`, `followee_id`, `status` (`pending`/`accepted`)                                                | user follows user; `pending` while the followee has approvals on |
 | `list_follows`| `user_id`, `list_id`                                                                                          | user follows a list |
 | `likes`       | `user_id`, `target_type` (`sighting`/`list`), `target_id`                                                     | |
 | `comments`    | `id`, `user_id`, `target_type`, `target_id`, `body`                                                           | |
+| `blocks`      | `blocker_id`, `blocked_id`                                                                                    | hides content both ways, removes follows |
+| `reports`     | `id`, `reporter_id`, `target_type`, `target_id`, `reason`                                                     | insert-only from the app |
 
 Views (security definer, RLS-equivalent filtering baked in):
 
@@ -43,7 +45,10 @@ Views (security definer, RLS-equivalent filtering baked in):
 - `life_list` — per-user aggregate: species, first seen, count, a photo.
 
 Functions: `feed(before, limit)` returns followed users' public sightings and lists
-in reverse chronological order (no ranking), `like_counts`, `comment_counts`.
+in reverse chronological order (no ranking); `engagement` (likes, comments, liked-by-me
+for up to 100 ids); `profile_stats`; `search_profiles`; `is_following`; `is_blocked`;
+`delete_account`. Per-user rate limits on comments, likes, follows, reports and sightings
+are enforced by triggers. Anonymous callers can execute nothing.
 
 Storage: private bucket `sighting-photos`, path `<user_id>/<sighting_id>.jpg`; readable by
 the owner or anyone who can see the sighting via `public_sightings`; loaded through signed
@@ -110,4 +115,8 @@ perch/
 9. Import (eBird, Merlin) — commit
 10. Profile + README — commit
 
-Status: all ten steps built. See README.md for setup.
+11. Hardening: moderation (blocks, reports, delete account), follow approval, rate limits,
+    EXIF stripping, PKCE auth, per-user local data scoping — commit
+12. Insights: outings, seasonality, species in common, Year in Birds — commit
+
+Status: all twelve steps built. See README.md for setup.

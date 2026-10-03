@@ -13,6 +13,7 @@ import { useLocalQuery, useLocalSightings } from '@/hooks/useLocalSightings';
 import { useAuth, useUserId } from '@/lib/auth';
 import * as db from '@/lib/db';
 import { haversineM } from '@/lib/geo';
+import { groupOutings } from '@/lib/insights';
 import { usePrefetchPhotoUrls } from '@/lib/photos';
 import { formatDate } from '@/lib/format';
 import { spacing, useTheme } from '@/lib/theme';
@@ -31,6 +32,10 @@ export default function DiaryScreen() {
   const sightings = useLocalSightings(userId, filter);
   const years = useLocalQuery(() => db.years(userId), [userId]);
   const places = useLocalQuery(() => db.places(userId), [userId]);
+  const life = useLocalQuery(() => db.lifeList(userId), [userId]);
+  const firstSeen = useMemo(() => new Map(life.map((e) => [e.species_code, e.first_sighting_id])), [life]);
+  // Outings: same day, same patch. Rows are flattened so one FlatList still virtualises everything.
+  const rows = useMemo(() => groupOutings(sightings, firstSeen).flatMap((o) => [{ kind: 'outing' as const, outing: o }, ...o.sightings.map((s) => ({ kind: 'sighting' as const, s, key: s.id }))]), [sightings, firstSeen]);
   usePrefetchPhotoUrls(sightings.filter((s) => !s.local_photo_uri).map((s) => s.photo_path));
 
   // Preview how others see pins near home.
@@ -77,27 +82,31 @@ export default function DiaryScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <FlatList
-        data={sightings}
-        keyExtractor={(s) => s.id}
+        data={rows}
+        keyExtractor={(r) => (r.kind === 'outing' ? r.outing.key : r.s.id)}
         stickyHeaderIndices={[0]}
         ListHeaderComponent={header}
         contentContainerStyle={{ paddingBottom: bottomPad }}
-        renderItem={({ item, index }) => {
-          const day = formatDate(item.observed_at);
-          const prevDay = index > 0 ? formatDate(sightings[index - 1].observed_at) : null;
-          return (
-            <View style={{ paddingHorizontal: spacing.lg }}>
-              {day !== prevDay ? (
-                <Text variant="label" muted style={{ paddingTop: spacing.lg, paddingBottom: spacing.sm }}>
-                  {day}
+        renderItem={({ item, index }) =>
+          item.kind === 'outing' ? (
+            <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.lg, paddingBottom: spacing.xs, gap: 2 }}>
+              <Text variant="label" muted>
+                {formatDate(item.outing.sightings[0].observed_at)}
+                {item.outing.place ? ` · ${item.outing.place}` : ''}
+              </Text>
+              {item.outing.sightings.length > 1 ? (
+                <Text variant="caption" faint>
+                  {item.outing.speciesCount} species
+                  {item.outing.lifers ? ` · ${item.outing.lifers} lifer${item.outing.lifers === 1 ? '' : 's'}` : ''}
                 </Text>
-              ) : (
-                <View style={{ height: spacing.md }} />
-              )}
-              <SightingCard index={index} sighting={item} compact pending={!!item.dirty} />
+              ) : null}
             </View>
-          );
-        }}
+          ) : (
+            <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm }}>
+              <SightingCard index={index} sighting={item.s} compact pending={!!item.s.dirty} />
+            </View>
+          )
+        }
         ListEmptyComponent={<Empty icon="book-outline" title={year || place ? 'Nothing matches' : 'No sightings yet'} body={year || place ? 'Try a different filter.' : 'Tap + to log your first bird.'} />}
       />
     </View>
