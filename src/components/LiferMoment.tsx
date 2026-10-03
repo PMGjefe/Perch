@@ -1,16 +1,21 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect } from 'react';
-import { Modal, Pressable, useWindowDimensions, View } from 'react-native';
-import Animated, { Easing, FadeIn, useAnimatedStyle, useSharedValue, withDelay, withSequence, withSpring, withTiming, ZoomIn } from 'react-native-reanimated';
+import { Modal, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import Animated, { Easing, FadeIn, useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withSequence, withSpring, withTiming, ZoomIn } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Text } from '@/components/ui';
+import { Photo } from '@/components/Photo';
+import { Button, Text } from '@/components/ui';
 import { haptic } from '@/lib/haptics';
-import { fonts, spacing, useTheme } from '@/lib/theme';
+import { fonts, radius, spacing, useTheme } from '@/lib/theme';
 
 export interface Lifer {
   species: string;
   scientific: string;
   number: number; // position on the life list
+  /** The sighting's photo, if any: the local file right after logging, or the storage path. */
+  photoLocalUri?: string | null;
+  photoPath?: string | null;
 }
 
 const PARTICLES = Array.from({ length: 22 }, (_, i) => ({
@@ -20,41 +25,92 @@ const PARTICLES = Array.from({ length: 22 }, (_, i) => ({
   delay: (i % 6) * 30,
 }));
 
+// The scrim over a blurred photo. Fixed tints of the two palettes' bg colours; everything else comes from the theme.
+const SCRIM_DARK = 'rgba(21,19,15,0.74)';
+const SCRIM_LIGHT = 'rgba(247,241,232,0.80)';
+
 /**
  * Full-screen celebration when a species is new to the life list. Heavy haptic, a burst of
- * warm particles, the name set large in the serif. Tap anywhere to dismiss.
+ * warm particles, the name set large in the serif, the sighting's own photo as a blurred backdrop.
+ * Tap anywhere, or the button, to dismiss.
  */
 export function LiferMoment({ lifer, onDone }: { lifer: Lifer | null; onDone: () => void }) {
   const { colors, dark } = useTheme();
   const { width, height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const reduced = useReducedMotion();
   useEffect(() => {
+    // Haptics are not motion: the thump still lands with Reduce Motion on.
     if (lifer) haptic.celebrate();
   }, [lifer]);
   if (!lifer) return null;
+
+  const first = lifer.number === 1;
+  const hasPhoto = !!(lifer.photoLocalUri || lifer.photoPath);
+  const textIn = reduced ? FadeIn : ZoomIn.delay(80).springify().damping(14).stiffness(180);
+  const tileIn = reduced ? FadeIn : ZoomIn.delay(40).springify().damping(14).stiffness(180);
+
   return (
-    <Modal transparent animationType="fade" visible onRequestClose={onDone} statusBarTranslucent>
+    <Modal transparent animationType="fade" visible onRequestClose={onDone} statusBarTranslucent accessibilityViewIsModal>
       <Pressable onPress={onDone} style={{ flex: 1 }}>
         <Animated.View style={{ flex: 1 }}>
-          <LinearGradient colors={dark ? ['#2A1D12', '#15130F'] : ['#F6E3D0', '#F7F1E8']} style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl }}>
-            <View style={{ position: 'absolute', left: width / 2, top: height / 2 - 60 }}>
-              {PARTICLES.map((p, i) => (
-                <Particle key={i} {...p} color={i % 3 === 0 ? colors.accent : i % 3 === 1 ? colors.accentSoft : colors.success} />
-              ))}
-            </View>
-            <Animated.View entering={ZoomIn.delay(80).springify().damping(14).stiffness(180)} style={{ alignItems: 'center', gap: spacing.md }}>
-              <Text style={{ fontFamily: fonts.semibold, fontSize: 13, letterSpacing: 3, color: colors.accent }}>LIFER</Text>
-              <Text style={{ fontFamily: fonts.display, fontSize: 96, lineHeight: 100, letterSpacing: -3, color: colors.text }}>#{lifer.number}</Text>
-              <Text variant="title" style={{ textAlign: 'center' }}>
+          {hasPhoto ? (
+            <>
+              <Photo path={lifer.photoPath} localUri={lifer.photoLocalUri} blurRadius={24} contentFit="cover" style={StyleSheet.absoluteFill} />
+              <View style={[StyleSheet.absoluteFill, { backgroundColor: dark ? SCRIM_DARK : SCRIM_LIGHT }]} />
+            </>
+          ) : (
+            <LinearGradient colors={dark ? ['#2A1D12', '#15130F'] : ['#F6E3D0', '#F7F1E8']} style={StyleSheet.absoluteFill} />
+          )}
+
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl, gap: spacing.lg }}>
+            {reduced ? null : (
+              <View style={{ position: 'absolute', left: width / 2, top: height / 2 - 60 }}>
+                {PARTICLES.map((p, i) => (
+                  <Particle key={i} {...p} color={i % 3 === 0 ? colors.accent : i % 3 === 1 ? colors.accentSoft : colors.success} />
+                ))}
+              </View>
+            )}
+
+            {hasPhoto ? (
+              <Animated.View entering={tileIn}>
+                <Photo
+                  path={lifer.photoPath}
+                  localUri={lifer.photoLocalUri}
+                  accessible={false}
+                  style={{ width: 132, height: 132, borderRadius: radius.lg, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border }}
+                />
+              </Animated.View>
+            ) : null}
+
+            <Animated.View
+              entering={textIn}
+              accessible
+              accessibilityLabel={first ? `Your first bird, ${lifer.species}` : `Lifer number ${lifer.number}, ${lifer.species}`}
+              style={{ alignItems: 'center', gap: spacing.md }}
+            >
+              <Text style={{ fontFamily: fonts.semibold, fontSize: 13, letterSpacing: 3, color: colors.accent }}>{first ? 'YOUR FIRST BIRD' : 'LIFER'}</Text>
+              {first ? null : <Text style={{ fontFamily: fonts.display, fontSize: 96, lineHeight: 100, letterSpacing: -3, color: colors.text }}>#{lifer.number}</Text>}
+              <Text variant={first ? 'display' : 'title'} style={{ textAlign: 'center' }}>
                 {lifer.species}
               </Text>
               <Text style={{ fontFamily: fonts.displayItalic, fontSize: 18, color: colors.textMuted, textAlign: 'center' }}>{lifer.scientific}</Text>
+              {first ? (
+                <Text style={{ fontFamily: fonts.displayItalic, fontSize: 18, color: colors.text, textAlign: 'center' }}>The list starts here.</Text>
+              ) : (
+                <Text variant="caption" muted style={{ textAlign: 'center' }}>
+                  New to your life list.
+                </Text>
+              )}
             </Animated.View>
-            <Animated.View entering={FadeIn.delay(900)} style={{ position: 'absolute', bottom: 64 }}>
-              <Text variant="caption" muted>
-                Tap anywhere
-              </Text>
-            </Animated.View>
-          </LinearGradient>
+          </View>
+
+          <Animated.View entering={FadeIn.delay(700)} style={{ position: 'absolute', bottom: insets.bottom + spacing.xl, left: spacing.xl, right: spacing.xl, gap: spacing.sm }}>
+            <Text variant="caption" muted style={{ textAlign: 'center' }}>
+              Tap anywhere to continue
+            </Text>
+            <Button title="Keep going" onPress={onDone} />
+          </Animated.View>
         </Animated.View>
       </Pressable>
     </Modal>
