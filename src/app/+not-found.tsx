@@ -12,8 +12,8 @@ export default function NotFound() {
         title="Nothing perched here"
         body="That link does not point anywhere we know."
         action={
-          <Link href="/(tabs)/feed" asChild>
-            <Button title="Go home" />
+          <Link href="/(tabs)/diary" asChild>
+            <Button title="Back to my diary" />
           </Link>
         }
       />

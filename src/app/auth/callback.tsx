@@ -8,5 +8,5 @@ import { useAuth } from '@/lib/auth';
 export default function AuthCallback() {
   const { session, loading } = useAuth();
   if (loading) return <Loading />;
-  return <Redirect href={session ? '/(tabs)/feed' : '/(auth)/sign-in'} />;
+  return <Redirect href={session ? '/(tabs)/diary' : '/(auth)/sign-in'} />;
 }
