@@ -48,3 +48,33 @@ export function useTheme() {
   const dark = scheme === 'dark';
   return { colors: dark ? palettes.dark : palettes.light, dark, spacing, radius };
 }
+
+// Poster gradients for sightings without a photo: six warm pairs per scheme. The bird's family
+// picks the pair, so every warbler shares a hue and a photo-less diary still has rhythm.
+export const posterGradients = {
+  light: [
+    ['#F1D9C4', '#E6C7A8'],
+    ['#E9D8C9', '#D9BFA7'],
+    ['#F4DCCB', '#E7C3AE'],
+    ['#E8DFCB', '#D6C7A6'],
+    ['#EEDAD2', '#DDBEB4'],
+    ['#E6DCCD', '#CDBBA3'],
+  ],
+  dark: [
+    ['#3A2A1E', '#1F1C17'],
+    ['#33281F', '#1F1C17'],
+    ['#3E2A1E', '#1F1C17'],
+    ['#2E2A1C', '#1F1C17'],
+    ['#3A2622', '#1F1C17'],
+    ['#2C2822', '#1F1C17'],
+  ],
+} as const;
+
+/** The poster pair for a family: index = sum of its char codes mod six, so the same family always gets the same hue. Unknown family → the first pair. */
+export function posterFor(family: string | undefined, dark: boolean): readonly [string, string] {
+  const key = family ?? '';
+  let sum = 0;
+  for (let i = 0; i < key.length; i++) sum += key.charCodeAt(i);
+  const set = dark ? posterGradients.dark : posterGradients.light;
+  return set[sum % set.length];
+}

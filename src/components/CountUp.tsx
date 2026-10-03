@@ -1,19 +1,20 @@
 import React, { useEffect } from 'react';
 import { TextInput, type TextStyle } from 'react-native';
-import Animated, { Easing, useAnimatedProps, useSharedValue, withTiming } from 'react-native-reanimated';
+import Animated, { Easing, useAnimatedProps, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { fonts, useTheme } from '@/lib/theme';
 
 Animated.addWhitelistedNativeProps({ text: true });
 const AnimatedInput = Animated.createAnimatedComponent(TextInput);
 
-/** Animates from the previous value to the new one entirely on the UI thread. Serif, big. */
+/** Animates from the previous value to the new one entirely on the UI thread. Serif, big. Jumps straight there under Reduce Motion. */
 export function CountUp({ value, style }: { value: number; style?: TextStyle }) {
   const { colors } = useTheme();
+  const reduced = useReducedMotion();
   const progress = useSharedValue(value);
   useEffect(() => {
-    progress.set(withTiming(value, { duration: 700, easing: Easing.out(Easing.cubic) }));
-  }, [value, progress]);
+    progress.set(withTiming(value, { duration: reduced ? 0 : 700, easing: Easing.out(Easing.cubic) }));
+  }, [value, progress, reduced]);
   const props = useAnimatedProps(() => ({ text: String(Math.round(progress.get())), defaultValue: String(Math.round(progress.get())) }));
   return (
     <AnimatedInput

@@ -1,16 +1,18 @@
 import React, { useEffect } from 'react';
 import { type DimensionValue, View } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 
 import { radius, spacing, useTheme } from '@/lib/theme';
 
-/** Pulsing placeholder block. */
+/** Pulsing placeholder block. Holds still at a mid opacity when Reduce Motion is on. */
 export function Skeleton({ width = '100%', height = 16, round = radius.sm, style }: { width?: DimensionValue; height?: number; round?: number; style?: object }) {
   const { colors } = useTheme();
+  const reduced = useReducedMotion();
   const opacity = useSharedValue(0.5);
   useEffect(() => {
-    opacity.set(withRepeat(withTiming(1, { duration: 900 }), -1, true));
-  }, [opacity]);
+    if (reduced) opacity.set(0.7);
+    else opacity.set(withRepeat(withTiming(1, { duration: 900 }), -1, true));
+  }, [opacity, reduced]);
   const animated = useAnimatedStyle(() => ({ opacity: opacity.get() }));
   return <Animated.View style={[{ width, height, borderRadius: round, backgroundColor: colors.surfaceAlt }, animated, style]} />;
 }
