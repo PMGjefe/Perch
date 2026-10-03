@@ -360,6 +360,8 @@ export function clearLocalData() {
 export function speciesCounts(userId: string): Map<string, number> {
   const rows = db.getAllSync<{ c: string; n: number }>('select species_code as c, count(*) as n from sightings where user_id = ? and deleted = 0 group by species_code', [userId]);
   return new Map(rows.map((r) => [r.c, r.n]));
+}
+
 // ---- W1-places
 /** The user's own named patches, each at the centre of its pinned sightings, best-known first. */
 export function placeAnchors(userId: string): { place: string; lat: number; lng: number; n: number }[] {
