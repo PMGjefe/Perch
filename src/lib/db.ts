@@ -354,3 +354,12 @@ export function clearLocalData() {
   db.execSync('delete from sightings; delete from meta;');
   notify(false);
 }
+
+// ---- W1-places
+/** The user's own named patches, each at the centre of its pinned sightings, best-known first. */
+export function placeAnchors(userId: string): { place: string; lat: number; lng: number; n: number }[] {
+  return db.getAllSync<{ place: string; lat: number; lng: number; n: number }>(
+    "select place_name as place, avg(lat) as lat, avg(lng) as lng, count(*) as n from sightings where user_id = ? and deleted = 0 and lat is not null and lng is not null and place_name is not null and place_name <> '' group by place_name order by n desc",
+    [userId],
+  );
+}
