@@ -1,4 +1,5 @@
-import { errorMessage, friendlyError } from '@/lib/errors';
+import { importCsv } from '@/lib/csv';
+import { device, errorMessage, friendlyError } from '@/lib/errors';
 
 const DEFAULT = 'Something went wrong. Please try again.';
 const OFFLINE = 'You appear to be offline. Anything you log is safe on this phone and will reach your account later.';
@@ -89,5 +90,34 @@ describe('friendlyError', () => {
     warn.mockClear();
     friendlyError(new Error('Network request failed'));
     expect(warn).not.toHaveBeenCalled();
+  });
+});
+
+describe('device', () => {
+  it('names the thing in hand (jest-expo runs as an iPhone)', () => {
+    expect(device).toBe('iPhone');
+  });
+});
+
+describe('csv.ts copy', () => {
+  const thrown = (text: string): unknown => {
+    try {
+      importCsv(text);
+    } catch (e) {
+      return e;
+    }
+    return undefined;
+  };
+
+  it('is authored, so the import screen shows errorMessage as written', () => {
+    expect(errorMessage(thrown('Common Name,Date'))).toBe('The file has no data rows.');
+    expect(errorMessage(thrown('Common Name,Date\n' + 'American Robin,2025-01-04\n'.repeat(50_001)))).toBe('That file has more than 50,000 rows. Split it and import in parts.');
+    expect(errorMessage(thrown('x'.repeat(25 * 1024 * 1024 + 1)))).toBe('That file is too large (25 MB max).');
+  });
+
+  it('is not something friendlyError knows, which is why the import screen does not route it there', () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    expect(friendlyError(thrown('Common Name,Date'), 'It needs to be a CSV export from eBird or Merlin.')).toBe('It needs to be a CSV export from eBird or Merlin.');
+    warn.mockRestore();
   });
 });

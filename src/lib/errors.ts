@@ -3,6 +3,10 @@
  * Every error Alert in the app goes through `friendlyError`, so raw Postgres codes,
  * JWT complaints and "Network request failed" never reach the screen.
  */
+import { Platform } from 'react-native';
+
+/** What to call this thing in copy: "saved on this iPhone" reads better than "on this device". */
+export const device = Platform.OS === 'ios' ? (Platform.isPad ? 'iPad' : 'iPhone') : 'phone';
 
 /** The raw message of anything thrown: an Error, a Supabase-style `{ message }` object, or a plain value. */
 export function errorMessage(e: unknown): string {

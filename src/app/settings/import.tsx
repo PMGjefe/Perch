@@ -10,7 +10,7 @@ import { BottomInset, Button, Card, Chip, Row, Screen, StatRow, Text } from '@/c
 import { useUserId } from '@/lib/auth';
 import { importCsv, type ImportResult } from '@/lib/csv';
 import * as db from '@/lib/db';
-import { friendlyError } from '@/lib/errors';
+import { errorMessage, friendlyError } from '@/lib/errors';
 import { plural } from '@/lib/format';
 import { haptic } from '@/lib/haptics';
 import { spacing, useTheme } from '@/lib/theme';
@@ -20,10 +20,10 @@ import type { Visibility } from '@/types/db';
 function summarize(result: ImportResult, alreadyHave: number): string {
   if (!result.rows.length) return 'We could not find any sightings in that file.';
   const speciesCount = new Set(result.rows.map((r) => r.species_code)).size;
-  const years = result.rows.map((r) => r.observed_at.slice(0, 4)).sort();
-  const minYear = years[0];
-  const maxYear = years[years.length - 1];
-  const span = years.length ? ` from ${minYear}${maxYear !== minYear ? ` to ${maxYear}` : ''}` : '';
+  const years = result.rows.map((r) => Number(r.observed_at.slice(0, 4)));
+  const minYear = years.reduce((a, b) => Math.min(a, b));
+  const maxYear = years.reduce((a, b) => Math.max(a, b));
+  const span = minYear === maxYear ? ` from ${minYear}` : ` from ${minYear} to ${maxYear}`;
   const known = alreadyHave ? ` ${alreadyHave} ${alreadyHave === 1 ? 'is' : 'are'} already in your diary.` : '';
   return `We found ${plural(result.rows.length, 'sighting')} across ${plural(speciesCount, 'species', 'species')}${span}.${known}`;
 }
@@ -46,18 +46,33 @@ export default function ImportScreen() {
   const alreadyHave = result ? result.rows.length - fresh.length : 0;
   const skippedAny = !!result && !!(result.duplicatesInFile || result.skippedNoDate || result.unmatched.length);
 
+  const fail = (message: string) => {
+    haptic.warning();
+    Alert.alert('Could not read that file', message);
+  };
+
   const pick = async () => {
     const res = await DocumentPicker.getDocumentAsync({ type: ['text/csv', 'text/comma-separated-values', 'text/plain', 'public.comma-separated-values-text', '*/*'], copyToCacheDirectory: true });
     if (res.canceled || !res.assets[0]) return;
     setBusy(true);
     try {
-      const text = await new File(res.assets[0].uri).text();
-      setResult(importCsv(text));
+      let text: string;
+      try {
+        text = await new File(res.assets[0].uri).text();
+      } catch (e) {
+        fail(friendlyError(e, 'It needs to be a CSV export from eBird or Merlin.'));
+        return;
+      }
+      try {
+        setResult(importCsv(text));
+      } catch (e) {
+        // csv.ts writes its own plain words ("That file has more than 50,000 rows. Split it and import in parts."),
+        // which friendlyError would flatten into the fallback, so they are shown as written.
+        fail(errorMessage(e));
+        return;
+      }
       setFileName(res.assets[0].name);
       setSkippedOpen(false);
-    } catch (e) {
-      haptic.warning();
-      Alert.alert('Could not read that file', friendlyError(e, 'It needs to be a CSV export from eBird or Merlin.'));
     } finally {
       setBusy(false);
     }
@@ -129,7 +144,7 @@ export default function ImportScreen() {
 
           {skippedAny ? (
             <View style={{ gap: spacing.sm }}>
-              <Pressable onPress={toggleSkipped} hitSlop={8} accessibilityRole="button" accessibilityState={{ expanded: skippedOpen }} accessibilityLabel="What we skipped">
+              <Pressable onPress={toggleSkipped} hitSlop={8} style={{ minHeight: 44, justifyContent: 'center' }} accessibilityRole="button" accessibilityState={{ expanded: skippedOpen }} accessibilityLabel="What we skipped">
                 <Row gap={spacing.xs}>
                   <Ionicons name={skippedOpen ? 'chevron-down' : 'chevron-forward'} size={16} color={colors.textMuted} />
                   <Text variant="label" muted>

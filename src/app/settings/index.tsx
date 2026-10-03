@@ -12,7 +12,7 @@ import { useSyncState } from '@/components/SyncProvider';
 import { deleteAccount } from '@/lib/social';
 import { backOr } from '@/lib/nav';
 import { useAuth, useUserId } from '@/lib/auth';
-import { friendlyError } from '@/lib/errors';
+import { device, friendlyError } from '@/lib/errors';
 import type { LatLng } from '@/lib/geo';
 import { haptic } from '@/lib/haptics';
 import { AVATAR_BUCKET, avatarPublicUrl, supabase } from '@/lib/supabase';
@@ -20,9 +20,6 @@ import { fonts, radius, spacing, useTheme } from '@/lib/theme';
 import { USERNAME } from '@/lib/validation';
 
 const LEGAL = (Constants.expoConfig?.extra?.legal as { privacy: string; terms: string } | undefined) ?? { privacy: 'https://example.com/privacy', terms: 'https://example.com/terms' };
-
-// What to call this thing in copy: "only on this iPhone" reads better than "on this device".
-const device = Platform.OS === 'ios' ? (Platform.isPad ? 'iPad' : 'iPhone') : 'phone';
 
 export default function Settings() {
   const userId = useUserId();

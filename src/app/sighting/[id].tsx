@@ -18,14 +18,12 @@ import { backOr } from '@/lib/nav';
 import { shareSighting } from '@/lib/share';
 import { haptic } from '@/lib/haptics';
 import * as db from '@/lib/db';
+import { device } from '@/lib/errors';
 import { formatDateTime } from '@/lib/format';
 import { fetchEngagement, fetchProfile, fetchPublicSighting, setLike } from '@/lib/social';
 import { speciesByCode } from '@/lib/taxonomy';
 import { fonts, radius, spacing, useTheme } from '@/lib/theme';
 import type { Engagement, PublicSighting } from '@/types/db';
-
-// What to call this thing in copy: "saved on this iPhone" reads better than "on this device".
-const device = Platform.OS === 'ios' ? (Platform.isPad ? 'iPad' : 'iPhone') : 'phone';
 
 export default function SightingDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();

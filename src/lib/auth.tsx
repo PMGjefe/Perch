@@ -222,6 +222,8 @@ export function friendlyAuthError(e: unknown): string {
   if (/invalid login credentials/i.test(msg)) return 'Wrong email or password.';
   if (/already registered/i.test(msg)) return 'That email already has an account.';
   if (/canceled|cancelled|ERR_REQUEST_CANCELED/i.test(msg)) return '';
+  // Deliberately shorter than friendlyError's offline copy: nothing has been logged yet on a sign-in
+  // screen, so its "anything you log is safe on this phone" promise would only confuse here.
   if (/network request failed|failed to fetch|network/i.test(msg)) return 'You appear to be offline.';
   return friendlyError(e, 'Could not sign in. Check your details and try again.');
 }
