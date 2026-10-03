@@ -103,3 +103,18 @@ export function exifDate(exif: Record<string, unknown> | null | undefined): Date
   const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), Number(m[4]), Number(m[5]), Number(m[6]));
   return Number.isNaN(d.getTime()) ? null : d;
 }
+
+// ---------------------------------------------------------------- places
+/**
+ * The user's own patch that `p` falls inside: the nearest anchor within `maxM` metres.
+ * Equal distances go to the better-known patch (larger n). Null when nothing is close.
+ */
+export function nearestPlace(anchors: { place: string; lat: number; lng: number; n: number }[], p: LatLng, maxM = 300): string | null {
+  let best: { place: string; d: number; n: number } | null = null;
+  for (const a of anchors) {
+    const d = haversineM(a, p);
+    if (d > maxM) continue;
+    if (!best || d < best.d || (d === best.d && a.n > best.n)) best = { place: a.place, d, n: a.n };
+  }
+  return best?.place ?? null;
+}
