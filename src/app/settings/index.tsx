@@ -1,6 +1,6 @@
 import { File } from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, Pressable, View } from 'react-native';
 
@@ -8,6 +8,7 @@ import { LocationField } from '@/components/LocationField';
 import { Avatar, BottomInset, Button, Input, Screen, SwitchRow, Text } from '@/components/ui';
 import * as WebBrowser from 'expo-web-browser';
 import Constants from 'expo-constants';
+import { useSyncState } from '@/components/SyncProvider';
 import { deleteAccount } from '@/lib/social';
 import { backOr } from '@/lib/nav';
 import { useAuth, useUserId } from '@/lib/auth';
@@ -20,7 +21,9 @@ const LEGAL = (Constants.expoConfig?.extra?.legal as { privacy: string; terms: s
 
 export default function Settings() {
   const userId = useUserId();
+  const router = useRouter();
   const { profile, updateProfile, signOut } = useAuth();
+  const { pending } = useSyncState();
   const { colors } = useTheme();
   const [displayName, setDisplayName] = useState(profile?.display_name ?? '');
   const [username, setUsername] = useState(profile?.username ?? '');
@@ -42,6 +45,18 @@ export default function Settings() {
     if (error) return Alert.alert('Upload failed', error.message);
     setAvatar(avatarPublicUrl(path));
   };
+
+  const confirmSignOut = () =>
+    pending > 0
+      ? Alert.alert('Sign out?', `${pending} sighting${pending === 1 ? '' : 's'} are not backed up yet. Signing out and clearing this device would lose them.`, [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Keep them, sign out', onPress: () => signOut({ keepLocal: true }) },
+          { text: 'Clear and sign out', style: 'destructive', onPress: () => signOut() },
+        ])
+      : Alert.alert('Sign out?', 'Your sightings are safe in your account and will be removed from this device.', [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Sign out', style: 'destructive', onPress: () => signOut() },
+        ]);
 
   const confirmDelete = () =>
     Alert.alert('Delete your account?', 'Everything you have logged will be gone. This cannot be undone.', [
@@ -98,9 +113,7 @@ export default function Settings() {
 
         <View style={{ gap: spacing.md, backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, borderWidth: 1, borderColor: colors.border }}>
           <Text variant="heading">Home privacy</Text>
-          <Text muted>
-            Set your home and Perch blurs every pin within 500 m of it. Other people see a circle roughly a kilometre wide instead of the exact spot, and the place name is dropped. You always see your own exact pins.
-          </Text>
+          <Text muted>Set your home and other people see sightings near it as a rough circle, never the exact spot. You always see your own exact pins.</Text>
           <LocationField label="Home" value={home} placeName="" onChange={setHome} onPlaceNameChange={() => {}} status="No home set" hidePlaceName />
           <SwitchRow label="Hide sightings near home" caption="Applies to public and followers-only sightings." value={hideHome} onValueChange={setHideHome} disabled={!home} />
           <Text variant="caption" faint>
@@ -113,6 +126,8 @@ export default function Settings() {
         <Button title="Save" onPress={save} loading={saving} />
 
         <View style={{ gap: spacing.sm, marginTop: spacing.lg }}>
+          <Button title="Import sightings from eBird or a CSV file" kind="secondary" icon="download-outline" onPress={() => router.push('/settings/import')} />
+          <Button title="Sign out" kind="ghost" onPress={confirmSignOut} />
           <Button title="Privacy policy" kind="ghost" onPress={() => WebBrowser.openBrowserAsync(LEGAL.privacy)} />
           <Button title="Terms of use" kind="ghost" onPress={() => WebBrowser.openBrowserAsync(LEGAL.terms)} />
           <Button title="Delete account" kind="ghost" onPress={confirmDelete} style={{ marginTop: spacing.lg }} />

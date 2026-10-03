@@ -9,7 +9,7 @@ export function ErrorState({ error, onRetry, title = "Couldn't load" }: { error:
     <Empty
       icon="cloud-offline-outline"
       title={offline ? 'You appear to be offline' : title}
-      body={offline ? 'Your own sightings still work. Try again when you are back online.' : error}
+      body={offline ? 'Your own sightings still work. Try again when you are back online.' : 'Something went wrong on our side. Give it another try.'}
       action={onRetry ? <Button title="Retry" kind="secondary" onPress={onRetry} /> : undefined}
     />
   );

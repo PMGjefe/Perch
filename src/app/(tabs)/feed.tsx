@@ -123,7 +123,7 @@ export default function FeedScreen() {
         }
         ListEmptyComponent={
           error ? (
-            <Empty icon="cloud-offline-outline" title="Could not load the feed" body={error} action={<Button title="Retry" kind="secondary" onPress={refresh} />} />
+            <Empty icon="cloud-offline-outline" title="Could not load the feed" body="Check your connection and try again." action={<Button title="Retry" kind="secondary" onPress={refresh} />} />
           ) : (
             <Empty icon="people-outline" title="Your feed is quiet" body="Follow some birders and their public sightings and lists show up here, newest first. No ranking, ever." action={<Button title="Find people" icon="search" onPress={() => router.push('/search')} />} />
           )

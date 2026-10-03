@@ -1,11 +1,10 @@
 import { Link, useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback } from 'react';
-import { Alert, Pressable, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { ErrorState } from '@/components/ErrorState';
 import { ListCard } from '@/components/ListCard';
 import { Skeleton } from '@/components/Skeleton';
-import { useSyncState } from '@/components/SyncProvider';
 import { ProfileHeader } from '@/components/ProfileHeader';
 import { BottomInset, Button, Chip, Empty, IconButton, Loading, Row, Screen, Section, Text } from '@/components/ui';
 import { useAsync } from '@/hooks/useAsync';
@@ -19,7 +18,6 @@ import { DEFAULT_USERNAME } from '@/lib/validation';
 export default function MeScreen() {
   const userId = useUserId();
   const { profile, loading: authLoading, refreshProfile, signOut } = useAuth();
-  const { pending } = useSyncState();
   const router = useRouter();
   const { colors } = useTheme();
   const counts = useLocalQuery(() => db.stats(userId), [userId]);
@@ -33,18 +31,6 @@ export default function MeScreen() {
       reload();
     }, [reload]),
   );
-
-  const confirmSignOut = () =>
-    pending > 0
-      ? Alert.alert('Sign out?', `${pending} sighting${pending === 1 ? '' : 's'} have not synced yet. Signing out and clearing this device would lose them.`, [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Keep them, sign out', onPress: () => signOut({ keepLocal: true }) },
-          { text: 'Clear and sign out', style: 'destructive', onPress: () => signOut() },
-        ])
-      : Alert.alert('Sign out?', 'Your sightings are safe in your account and will be removed from this device.', [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Sign out', style: 'destructive', onPress: () => signOut() },
-        ]);
 
   if (!profile) {
     if (authLoading) return <Loading />;
@@ -76,7 +62,6 @@ export default function MeScreen() {
       ) : null}
       <Row>
         <Chip label="Find people" icon="search" onPress={() => router.push('/search')} />
-        <Chip label="Import CSV" icon="download-outline" onPress={() => router.push('/settings/import')} />
         <Chip label={`${new Date().getFullYear()} in birds`} icon="sparkles-outline" onPress={() => router.push({ pathname: '/year/[year]', params: { year: String(new Date().getFullYear()) } })} />
       </Row>
 
@@ -108,7 +93,6 @@ export default function MeScreen() {
           </Text>
         </Pressable>
       </Link>
-      <Button title="Sign out" kind="secondary" onPress={confirmSignOut} />
       <BottomInset />
     </Screen>
   );

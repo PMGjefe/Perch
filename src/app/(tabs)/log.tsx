@@ -18,9 +18,9 @@ function greeting(): string {
   const d = daylight(now);
   const h = now.getHours();
   if (d === 0) return h < 5 ? 'Owls, nightjars, and the first chorus soon.' : 'Nocturnal flight calls count too.';
-  if (d < 1 && h < 12) return 'Dawn chorus hours. Works offline, syncs later.';
+  if (d < 1 && h < 12) return 'Dawn chorus hours.';
   if (d < 1) return 'Golden hour. Roost flights and late songs.';
-  return 'Works offline. Syncs when you are back online.';
+  return 'What did you see?';
 }
 
 export default function LogScreen() {

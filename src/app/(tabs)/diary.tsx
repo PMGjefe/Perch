@@ -47,11 +47,13 @@ export default function DiaryScreen() {
       <Row style={{ justifyContent: 'space-between', paddingHorizontal: spacing.lg, paddingTop: spacing.sm }}>
         <View>
           <Text variant="title">{sightings.length} sightings</Text>
-          <Pressable onPress={() => sync()}>
-            <Text variant="caption" muted>
-              {syncing ? 'Syncing…' : lastError ? `Sync failed · tap to retry` : pending ? `${pending} waiting to sync` : 'Synced'}
-            </Text>
-          </Pressable>
+          {syncing || lastError || pending ? (
+            <Pressable onPress={() => sync()}>
+              <Text variant="caption" muted>
+                {syncing ? 'Backing up…' : lastError ? 'Not backed up yet · tap to retry' : `${pending} not backed up yet`}
+              </Text>
+            </Pressable>
+          ) : null}
         </View>
         <Row>
           <Chip label="List" icon="list" active={mode === 'list'} onPress={() => setMode('list')} />

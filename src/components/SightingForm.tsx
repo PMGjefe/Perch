@@ -50,6 +50,8 @@ export function SightingForm({ userId, existing, onSaved, resetKey }: Props) {
   const [sensitive, setSensitive] = useState(existing?.sensitive ?? false);
   const [locStatus, setLocStatus] = useState<string | null>(existing ? null : 'Tap “Current location” or pick on the map.');
   const [saving, setSaving] = useState(false);
+  // Sharing controls are for experienced users; keep them folded unless the sighting already uses them.
+  const [moreOpen, setMoreOpen] = useState(!!existing && (existing.visibility !== 'public' || existing.sensitive));
   const touchedWhen = useRef(!!existing);
   const touchedWhere = useRef(!!existing);
   const recent = useLocalQuery(() => db.recentSpecies(userId), [userId]);
@@ -186,18 +188,27 @@ export function SightingForm({ userId, existing, onSaved, resetKey }: Props) {
 
       <Input label="Note" value={note} onChangeText={setNote} placeholder="Behaviour, count, who you were with…" multiline style={{ minHeight: 80, textAlignVertical: 'top' }} />
 
-      <View style={{ gap: spacing.sm }}>
+      <Pressable onPress={() => setMoreOpen((o) => !o)} hitSlop={8} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, alignSelf: 'flex-start' }}>
+        <Ionicons name={moreOpen ? 'chevron-down' : 'chevron-forward'} size={16} color={colors.textMuted} />
         <Text variant="label" muted>
-          Who can see this
+          {moreOpen ? 'Fewer options' : visibility === 'public' && !sensitive ? 'More options' : `More options · ${VISIBILITIES.find((v) => v.value === visibility)?.label}${sensitive ? ' · sensitive' : ''}`}
         </Text>
-        <Row>
-          {VISIBILITIES.map((v) => (
-            <Chip key={v.value} label={v.label} icon={v.icon} active={visibility === v.value} onPress={() => setVisibility(v.value)} />
-          ))}
-        </Row>
-      </View>
-
-      <SwitchRow label="Sensitive location" caption="Nest, roost, rarity. Others see the sighting but never the pin." value={sensitive} onValueChange={setSensitive} />
+      </Pressable>
+      {moreOpen ? (
+        <View style={{ gap: spacing.lg }}>
+          <View style={{ gap: spacing.sm }}>
+            <Text variant="label" muted>
+              Who can see this
+            </Text>
+            <Row>
+              {VISIBILITIES.map((v) => (
+                <Chip key={v.value} label={v.label} icon={v.icon} active={visibility === v.value} onPress={() => setVisibility(v.value)} />
+              ))}
+            </Row>
+          </View>
+          <SwitchRow label="Sensitive location" caption="Nest, roost, rarity. Others see the sighting but never the pin." value={sensitive} onValueChange={setSensitive} />
+        </View>
+      ) : null}
 
       <Button title={existing ? 'Save changes' : species ? 'Log it' : 'Pick a species first'} onPress={save} loading={saving} disabled={!species} icon={existing ? undefined : 'checkmark'} />
       <BottomInset />
