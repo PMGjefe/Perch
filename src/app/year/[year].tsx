@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import React, { useMemo, useRef, useState } from 'react';
-import { type NativeScrollEvent, type NativeSyntheticEvent, Pressable, ScrollView, Share, useWindowDimensions, View } from 'react-native';
+import { type NativeScrollEvent, type NativeSyntheticEvent, ScrollView, Share, useWindowDimensions, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -261,7 +261,7 @@ function Bookend({ label, code, when, photo }: { label: string; code: string; wh
   const { colors } = useTheme();
   const sp = speciesByCode(code);
   return (
-    <Pressable style={{ flexDirection: 'row', gap: spacing.md, alignItems: 'center' }}>
+    <View style={{ flexDirection: 'row', gap: spacing.md, alignItems: 'center' }}>
       {photo ? <Photo path={photo} style={{ width: 84, height: 84, borderRadius: radius.lg, backgroundColor: colors.surfaceAlt }} /> : null}
       <View style={{ flex: 1, gap: 2 }}>
         <Text style={{ fontFamily: fonts.semibold, fontSize: 12, letterSpacing: 3, color: colors.accent }}>{label}</Text>
@@ -272,6 +272,6 @@ function Bookend({ label, code, when, photo }: { label: string; code: string; wh
           {formatDate(when, false)}
         </Text>
       </View>
-    </Pressable>
+    </View>
   );
 }

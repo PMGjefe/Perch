@@ -42,7 +42,7 @@ export default function UserProfile() {
   const [tab, setTab] = useState<Tab>('sightings');
   const [followOverride, setFollowOverride] = useState<boolean | null>(null);
 
-  const { data, error, loading, reload } = useAsync(async () => {
+  const { data, error, loading, reload, setData } = useAsync(async () => {
     const [profile, stats, sightings, life, lists, blocked] = await Promise.all([fetchProfile(id), fetchProfileStats(id), fetchUserSightings(id), fetchUserLifeList(id), fetchLists(id), id === me ? false : isBlocked(me, id)]);
     await signPhotoUrls(sightings.map((s) => s.photo_path));
     return { profile, stats, sightings, life, lists, blocked };
@@ -66,11 +66,15 @@ export default function UserProfile() {
 
   const toggleFollow = async () => {
     if (following == null || !data) return;
+    // Tapping "Requested" cancels the pending request; otherwise toggle the follow.
     const wantFollow = !following && !data.stats.follow_requested;
-    setFollowOverride(wantFollow ? true : false);
+    setFollowOverride(wantFollow);
     try {
       await setFollow(me, id, wantFollow);
-      reload();
+      // Fresh stats tell us whether the follow landed as accepted or pending; then drop the override.
+      const stats = await fetchProfileStats(id);
+      setData({ ...data, stats });
+      setFollowOverride(null);
     } catch {
       setFollowOverride(following);
     }
