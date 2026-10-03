@@ -1,16 +1,15 @@
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { type Lifer, LiferMoment } from '@/components/LiferMoment';
 import { SightingForm } from '@/components/SightingForm';
 import { Screen, Text } from '@/components/ui';
-import { useUserId } from '@/lib/auth';
+import { useAuth, useUserId } from '@/lib/auth';
 import * as db from '@/lib/db';
 import { daylight } from '@/lib/insights';
 import { speciesByCode } from '@/lib/taxonomy';
-import { spacing } from '@/lib/theme';
+import { fonts, useTheme } from '@/lib/theme';
 
 /** Light-aware one-liner. Dawn and dusk are when birders are out; say so. */
 function greeting(): string {
@@ -23,10 +22,16 @@ function greeting(): string {
   return 'What did you see?';
 }
 
+/** A brand-new account cannot have server rows this device has not seen yet. */
+const FRESH_ACCOUNT_WINDOW_MS = 24 * 60 * 60 * 1000;
+
 export default function LogScreen() {
   const userId = useUserId();
+  const { profile, session } = useAuth();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+  // The welcome screen sends `pick=1` so the species picker opens straight away.
+  const { pick } = useLocalSearchParams<{ pick?: string }>();
   const [resetKey, setResetKey] = useState(0);
   const [lifer, setLifer] = useState<Lifer | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
@@ -41,28 +46,44 @@ export default function LogScreen() {
     }, []),
   );
 
+  // One eyebrow line above the headline; the bird's name is the title.
+  const header = (
+    <View>
+      <Text style={{ fontFamily: fonts.semibold, fontSize: 12, letterSpacing: 2.5, color: colors.accent }}>{greeting().toUpperCase()}</Text>
+    </View>
+  );
+
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <Screen scroll style={{ paddingTop: insets.top + spacing.md, gap: spacing.lg }}>
-        <View>
-          <Text variant="title">Log a bird</Text>
-          <Text muted>{greeting()}</Text>
-        </View>
+      <Screen padded={false} style={{ flex: 1 }}>
         <SightingForm
           key={resetKey}
           userId={userId}
           resetKey={resetKey}
+          sticky
+          header={header}
+          // Only on the form's very first mount after arriving from welcome; a save or the 5-minute reset bumps resetKey.
+          autoOpenPicker={pick === '1' && resetKey === 0}
           onSaved={(s) => {
             setResetKey((k) => k + 1);
             // A lifer is a species with exactly one sighting: the one just saved.
-            // Only trust the local store once the first pull from the server has happened.
+            // Trust the local store once the first pull from the server has happened, or when the
+            // account is so new there cannot be server rows this device has missed.
+            const createdAt = profile?.created_at ?? session?.user.created_at;
+            const freshAccount = !!createdAt && Date.now() - new Date(createdAt).getTime() < FRESH_ACCOUNT_WINDOW_MS;
             const synced = !!db.getMeta(`last_sync_at:${userId}`);
             const count = db.listSightings(userId, { speciesCode: s.species_code }).length;
-            if (synced && count === 1) {
+            if ((synced || freshAccount) && count === 1) {
               const sp = speciesByCode(s.species_code);
               // Life-list number = rank by first-seen date, matching the numbering on the Life tab.
               const number = db.lifeList(userId).filter((e) => e.first_seen <= s.observed_at).length;
-              setLifer({ species: sp?.common ?? s.species_code, scientific: sp?.sci ?? '', number });
+              setLifer({
+                species: sp?.common ?? s.species_code,
+                scientific: sp?.sci ?? '',
+                number,
+                photoLocalUri: s.local_photo_uri,
+                photoPath: s.photo_path,
+              });
               setPendingId(s.id);
             } else {
               router.push({ pathname: '/sighting/[id]', params: { id: s.id } });
