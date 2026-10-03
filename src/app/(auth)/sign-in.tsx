@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Link } from 'expo-router';
+import { Link, useLocalSearchParams } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import type { TextInput } from 'react-native';
 import { Alert, KeyboardAvoidingView, Platform, View } from 'react-native';
@@ -14,10 +14,12 @@ export default function SignIn() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { signInWithPassword } = useAuth();
-  const [email, setEmail] = useState('');
+  // Arriving from sign-up: the address is prefilled and the email form is already open.
+  const { email: emailParam } = useLocalSearchParams<{ email?: string }>();
+  const [email, setEmail] = useState(emailParam ?? '');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
-  const [useEmail, setUseEmail] = useState(false);
+  const [useEmail, setUseEmail] = useState(!!emailParam);
   const passwordRef = useRef<TextInput>(null);
 
   const submit = async () => {
@@ -43,10 +45,15 @@ export default function SignIn() {
           <Text style={{ fontFamily: fonts.displayItalic, fontSize: 19, color: colors.textMuted, textAlign: 'center' }}>Your sightings, your life list, your people.</Text>
         </View>
         <AuthProviders lead />
+        {emailParam ? (
+          <Text variant="caption" muted style={{ textAlign: 'center' }}>
+            Confirm the link we sent, then sign in.
+          </Text>
+        ) : null}
         {useEmail ? (
           <View style={{ gap: spacing.md }}>
-            <Input label="Email" value={email} onChangeText={setEmail} autoFocus autoCapitalize="none" autoComplete="email" keyboardType="email-address" textContentType="emailAddress" returnKeyType="next" onSubmitEditing={() => passwordRef.current?.focus()} blurOnSubmit={false} />
-            <Input ref={passwordRef} label="Password" value={password} onChangeText={setPassword} secureTextEntry autoComplete="password" textContentType="password" returnKeyType="go" onSubmitEditing={submit} />
+            <Input label="Email" value={email} onChangeText={setEmail} autoFocus={!emailParam} autoCapitalize="none" autoComplete="email" keyboardType="email-address" textContentType="emailAddress" returnKeyType="next" onSubmitEditing={() => passwordRef.current?.focus()} blurOnSubmit={false} />
+            <Input ref={passwordRef} label="Password" value={password} onChangeText={setPassword} autoFocus={!!emailParam} secureTextEntry autoComplete="password" textContentType="password" returnKeyType="go" onSubmitEditing={submit} />
             <Button title="Sign in" onPress={submit} loading={busy} disabled={!email || !password} />
             <Link href="/(auth)/forgot-password" asChild>
               <Text variant="caption" muted style={{ textAlign: 'center', paddingVertical: spacing.sm }}>

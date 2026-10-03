@@ -6,6 +6,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { SyncProvider } from '@/components/SyncProvider';
+import { WelcomeGate } from '@/components/WelcomeGate';
 import { Loading } from '@/components/ui';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { useAppFonts } from '@/lib/fonts';
@@ -77,7 +78,9 @@ function Root() {
         <Stack.Screen name="user/[id]/followers" options={{ title: '' }} />
         <Stack.Screen name="species/[code]" options={{ title: '' }} />
         <Stack.Screen name="year/[year]" options={{ headerShown: false, presentation: 'fullScreenModal', animation: 'fade' }} />
+        <Stack.Screen name="welcome" options={{ headerShown: false, presentation: 'fullScreenModal', animation: 'fade' }} />
       </Stack>
+      <WelcomeGate />
     </>
   );
 }

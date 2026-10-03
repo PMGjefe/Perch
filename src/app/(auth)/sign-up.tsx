@@ -1,4 +1,4 @@
-import { Link } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -13,6 +13,7 @@ export default function SignUp() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { signUpWithPassword } = useAuth();
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -25,7 +26,9 @@ export default function SignUp() {
     setBusy(true);
     try {
       const { needsConfirmation } = await signUpWithPassword(email, password, username);
-      if (needsConfirmation) Alert.alert('Check your email', 'Confirm your address, then sign in.');
+      if (needsConfirmation) {
+        Alert.alert('Check your email', 'Confirm your address, then sign in.', [{ text: 'OK', onPress: () => router.replace({ pathname: '/(auth)/sign-in', params: { email } }) }]);
+      }
     } catch (e) {
       Alert.alert('Sign-up failed', friendlyAuthError(e));
     } finally {
