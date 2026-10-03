@@ -17,6 +17,15 @@
 --   daejun: Mark Olsen, https://unsplash.com/photos/gray-and-white-bird-on-brown-tree-branch-8EYm1qcAniY
 --   glwgul: Vidar Nordli-Mathisen, https://unsplash.com/photos/young-gull-flying-on-sky-lzDUUjjYKzk
 --   grhowl: Michael Chambers, https://unsplash.com/photos/brown-owl-on-brown-tree-branch-during-daytime-oSNiQ8RLCew
+--   pacwre1: Vincent van Zalinge, https://unsplash.com/photos/small-brown-bird-on-branch-oH6RhpzOtDg
+--   buffle: Steven Russell, https://unsplash.com/photos/a-duck-floating-on-top-of-a-body-of-water-GS3UA5cEOao
+--   annhum: Anchor Lee, https://unsplash.com/photos/bird-near-purple-petaled-flowers-oZBkyPE6H1Q
+--   varthr: Margaret Strickland, https://unsplash.com/photos/a-bird-standing-on-a-tree-branch-in-the-rain-iE0t3U0KS6c
+--   piggui: Neil Mewes, https://unsplash.com/photos/a-black-and-white-bird-sitting-on-the-sand-KgMI8C7hOvE
+--   rhiauk: Mathew Schwartz, https://unsplash.com/photos/a-bird-flying-over-a-body-of-water-ik8eihOtUj0
+--   gockin: Brian Yurasits, https://unsplash.com/photos/a-small-bird-sitting-on-top-of-a-tree-branch-PENDnI_tYgw
+--   ruckin: anish lakkapragada, https://unsplash.com/photos/a-small-bird-perched-on-top-of-a-tree-branch-JA1O7pOfXCs
+--   sursco: Tyler Moulton, https://unsplash.com/photos/a-duck-swimming-in-a-large-body-of-water-EGbrslU_wqs
 --   hoomer: Camerauthor Photos, https://unsplash.com/photos/a-duck-floating-on-top-of-a-body-of-water-4OjFItqskr4
 --   norfli: Margaret Strickland, https://unsplash.com/photos/a-bird-perched-on-a-branch-of-a-tree-U_Ws7oU1u2Q
 --   norpin: Aleksandar Popovski, https://unsplash.com/photos/a-duck-floating-on-top-of-a-body-of-water-KvBmoX96gn0
@@ -72,15 +81,15 @@ begin
   insert into public.sightings (id, user_id, species_code, observed_at, lat, lng, place_name, note, visibility, sensitive, source, photo_path) values
     ('c0000000-0000-4000-8000-000000000001', dev, 'amerob',  '2025-01-04 08:12-08', 47.6205, -122.3493, 'Discovery Park', 'First bird of the year, naturally.', 'public', false, 'app', 'https://images.unsplash.com/photo-1616720072185-8b281d6538ca?w=1080&q=80&fm=jpg&fit=max'),
     ('c0000000-0000-4000-8000-000000000002', dev, 'stejay',  '2025-01-04 08:40-08', 47.6580, -122.4090, 'Discovery Park', 'Loud pair near the loop trail.', 'public', false, 'app', 'https://images.unsplash.com/photo-1564239456204-0c811ae42a3a?w=1080&q=80&fm=jpg&fit=max'),
-    ('c0000000-0000-4000-8000-000000000003', dev, 'pacwre1', '2025-01-04 09:05-08', 47.6590, -122.4120, 'Discovery Park', 'Singing from the understory, finally got a look.', 'public', false, 'app', null),
-    ('c0000000-0000-4000-8000-000000000004', dev, 'buffle',  '2025-01-18 15:20-08', 47.6801, -122.3390, 'Green Lake', '', 'public', false, 'app', null),
+    ('c0000000-0000-4000-8000-000000000003', dev, 'pacwre1', '2025-01-04 09:05-08', 47.6590, -122.4120, 'Discovery Park', 'Singing from the understory, finally got a look.', 'public', false, 'app', 'https://images.unsplash.com/photo-1506453102932-ad380771c201?w=1080&q=80&fm=jpg&fit=max'),
+    ('c0000000-0000-4000-8000-000000000004', dev, 'buffle',  '2025-01-18 15:20-08', 47.6801, -122.3390, 'Green Lake', '', 'public', false, 'app', 'https://images.unsplash.com/photo-1713124209265-e117fbb5b939?w=1080&q=80&fm=jpg&fit=max'),
     ('c0000000-0000-4000-8000-000000000005', dev, 'hoomer',  '2025-01-18 15:31-08', 47.6790, -122.3420, 'Green Lake', 'Two drakes, one hen. Crests up.', 'public', false, 'app', 'https://images.unsplash.com/photo-1700705241679-967b0b515ac3?w=1080&q=80&fm=jpg&fit=max'),
     ('c0000000-0000-4000-8000-000000000006', dev, 'pibgre',  '2025-01-18 15:45-08', 47.6812, -122.3355, 'Green Lake', '', 'public', false, 'app', 'https://images.unsplash.com/photo-1642081117189-9fda3be13009?w=1080&q=80&fm=jpg&fit=max'),
-    ('c0000000-0000-4000-8000-000000000007', dev, 'annhum',  '2025-02-02 07:55-08', 47.6618, -122.3348, 'Backyard', 'On the feeder before sunrise.', 'public', false, 'app', null),
+    ('c0000000-0000-4000-8000-000000000007', dev, 'annhum',  '2025-02-02 07:55-08', 47.6618, -122.3348, 'Backyard', 'On the feeder before sunrise.', 'public', false, 'app', 'https://images.unsplash.com/photo-1567719432138-cecbcdb16a21?w=1080&q=80&fm=jpg&fit=max'),
     ('c0000000-0000-4000-8000-000000000008', dev, 'bkcchi',  '2025-02-02 08:01-08', 47.6620, -122.3340, 'Backyard', '', 'public', false, 'app', 'https://images.unsplash.com/photo-1674431074456-82f2a6ea34da?w=1080&q=80&fm=jpg&fit=max'),
     ('c0000000-0000-4000-8000-000000000009', dev, 'daejun',  '2025-02-02 08:03-08', 47.6613, -122.3350, 'Backyard', 'Oregon form, as always.', 'followers', false, 'app', 'https://images.unsplash.com/photo-1613164563503-902995c92402?w=1080&q=80&fm=jpg&fit=max'),
     ('c0000000-0000-4000-8000-000000000010', dev, 'brdowl',  '2025-03-09 19:40-07', 47.6650, -122.3300, 'Wallingford', 'Nest tree. Keeping this one quiet.', 'public', true, 'app', 'https://images.unsplash.com/photo-1517517666444-6978df380b74?w=1080&q=80&fm=jpg&fit=max'),
-    ('c0000000-0000-4000-8000-000000000011', dev, 'varthr',  '2025-03-15 10:10-07', 47.6540, -122.4150, 'Discovery Park', 'Heard the eerie whistle before seeing it.', 'public', false, 'app', null),
+    ('c0000000-0000-4000-8000-000000000011', dev, 'varthr',  '2025-03-15 10:10-07', 47.6540, -122.4150, 'Discovery Park', 'Heard the eerie whistle before seeing it.', 'public', false, 'app', 'https://images.unsplash.com/photo-1677643065913-266941596634?w=1080&q=80&fm=jpg&fit=max'),
     ('c0000000-0000-4000-8000-000000000012', dev, 'rebsap',  '2025-03-15 10:50-07', 47.6555, -122.4100, 'Discovery Park', 'Working a birch, neat rows of wells.', 'public', false, 'app', 'https://images.unsplash.com/photo-1550958200-73db1b7809e1?w=1080&q=80&fm=jpg&fit=max'),
     ('c0000000-0000-4000-8000-000000000013', dev, 'vigswa',  '2025-04-05 12:30-07', 47.6530, -122.2940, 'Union Bay Natural Area', 'First swallows of spring.', 'public', false, 'app', 'https://images.unsplash.com/photo-1605770006803-d23d56a7bab2?w=1080&q=80&fm=jpg&fit=max'),
     ('c0000000-0000-4000-8000-000000000014', dev, 'yerwar',  '2025-04-05 12:45-07', 47.6525, -122.2950, 'Union Bay Natural Area', 'Audubon''s.', 'public', false, 'app', 'https://images.unsplash.com/photo-1703583502443-3a85213645a7?w=1080&q=80&fm=jpg&fit=max'),
@@ -90,11 +99,11 @@ begin
     ('c0000000-0000-4000-8000-000000000018', dev, 'wlswar',  '2025-05-10 07:52-07', 47.6540, -122.2925, 'Union Bay Natural Area', 'Year bird.', 'public', false, 'app', 'https://images.unsplash.com/photo-1617995765952-b9b9a2ad992d?w=1080&q=80&fm=jpg&fit=max'),
     ('c0000000-0000-4000-8000-000000000019', dev, 'cedwax',  '2025-06-21 18:15-07', 47.6200, -122.3350, 'Volunteer Park', 'Flock of ~20 in the cherries.', 'public', false, 'app', 'https://images.unsplash.com/photo-1725672321041-4a821cc4be96?w=1080&q=80&fm=jpg&fit=max'),
     ('c0000000-0000-4000-8000-000000000020', dev, 'pilwoo',  '2025-07-06 09:00-07', 47.6560, -122.4080, 'Discovery Park', 'Huge. Never gets old.', 'public', false, 'app', 'https://images.unsplash.com/photo-1611005336745-17abe0bcf035?w=1080&q=80&fm=jpg&fit=max'),
-    ('c0000000-0000-4000-8000-000000000021', dev, 'piggui',  '2025-07-06 10:30-07', 47.6620, -122.4180, 'West Point', 'Red feet, in the surf.', 'public', false, 'app', null),
-    ('c0000000-0000-4000-8000-000000000022', dev, 'rhiauk',  '2025-07-06 10:45-07', 47.6630, -122.4200, 'West Point', 'Distant, but the horn was clear in the scope.', 'public', false, 'app', null),
-    ('c0000000-0000-4000-8000-000000000023', dev, 'sursco',  '2025-10-25 11:00-07', 47.6625, -122.4190, 'West Point', 'Fall arrivals.', 'public', false, 'app', null),
-    ('c0000000-0000-4000-8000-000000000024', dev, 'gockin',  '2025-11-08 13:10-08', 47.6545, -122.4130, 'Discovery Park', 'Mixed flock with chickadees.', 'public', false, 'app', null),
-    ('c0000000-0000-4000-8000-000000000025', dev, 'ruckin',  '2025-11-08 13:12-08', 47.6547, -122.4128, 'Discovery Park', '', 'public', false, 'app', null),
+    ('c0000000-0000-4000-8000-000000000021', dev, 'piggui',  '2025-07-06 10:30-07', 47.6620, -122.4180, 'West Point', 'Red feet, in the surf.', 'public', false, 'app', 'https://images.unsplash.com/photo-1640270640128-d8744fcd1025?w=1080&q=80&fm=jpg&fit=max'),
+    ('c0000000-0000-4000-8000-000000000022', dev, 'rhiauk',  '2025-07-06 10:45-07', 47.6630, -122.4200, 'West Point', 'Distant, but the horn was clear in the scope.', 'public', false, 'app', 'https://images.unsplash.com/photo-1705198190334-156df02024de?w=1080&q=80&fm=jpg&fit=max'),
+    ('c0000000-0000-4000-8000-000000000023', dev, 'sursco',  '2025-10-25 11:00-07', 47.6625, -122.4190, 'West Point', 'Fall arrivals.', 'public', false, 'app', 'https://images.unsplash.com/photo-1645799142571-5e075c44dbbf?w=1080&q=80&fm=jpg&fit=max'),
+    ('c0000000-0000-4000-8000-000000000024', dev, 'gockin',  '2025-11-08 13:10-08', 47.6545, -122.4130, 'Discovery Park', 'Mixed flock with chickadees.', 'public', false, 'app', 'https://images.unsplash.com/photo-1681778481784-37919d8db3a6?w=1080&q=80&fm=jpg&fit=max'),
+    ('c0000000-0000-4000-8000-000000000025', dev, 'ruckin',  '2025-11-08 13:12-08', 47.6547, -122.4128, 'Discovery Park', '', 'public', false, 'app', 'https://images.unsplash.com/photo-1714273029495-4fc97919b1c1?w=1080&q=80&fm=jpg&fit=max'),
     ('c0000000-0000-4000-8000-000000000026', dev, 'norfli',  '2026-01-01 09:30-08', 47.6616, -122.3345, 'Backyard', 'New year, same flicker on the suet.', 'public', false, 'app', 'https://images.unsplash.com/photo-1677641782896-d10fcbf58e49?w=1080&q=80&fm=jpg&fit=max'),
     ('c0000000-0000-4000-8000-000000000027', dev, 'spotow',  '2026-01-01 09:35-08', 47.6614, -122.3347, 'Backyard', '', 'private', false, 'app', 'https://images.unsplash.com/photo-1707630453947-f2a61fc01c88?w=1080&q=80&fm=jpg&fit=max'),
     ('c0000000-0000-4000-8000-000000000028', dev, 'belkin1', '2026-02-14 16:00-08', 47.6795, -122.3410, 'Green Lake', 'Rattling over the water.', 'public', false, 'app', 'https://images.unsplash.com/photo-1623974108307-968b9f796921?w=1080&q=80&fm=jpg&fit=max'),
