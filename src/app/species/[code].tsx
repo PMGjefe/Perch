@@ -5,6 +5,7 @@ import { FlatList, View } from 'react-native';
 import { Rise } from '@/components/motion';
 import { SightingCard } from '@/components/SightingCard';
 import { SightingsMap } from '@/components/SightingsMap';
+import { Stat } from '@/components/Stat';
 import { useBottomPadding } from '@/components/TabBarInset';
 import { Empty, Row, Text } from '@/components/ui';
 import { useLocalQuery, useLocalSightings } from '@/hooks/useLocalSightings';
@@ -54,9 +55,9 @@ export default function SpeciesScreen() {
             {first ? (
               <Rise index={1}>
                 <Row style={{ backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.md, justifyContent: 'space-around' }}>
-                  <Stat n={sightings.length} label={sightings.length === 1 ? 'sighting' : 'sightings'} />
-                  <Stat n={places} label={places === 1 ? 'place' : 'places'} />
-                  <Stat text={formatDate(first.observed_at, false)} label={`first, ${new Date(first.observed_at).getFullYear()}`} />
+                  <Stat value={sightings.length} label={sightings.length === 1 ? 'sighting' : 'sightings'} />
+                  <Stat value={places} label={places === 1 ? 'place' : 'places'} />
+                  <Stat value={formatDate(first.observed_at, false)} label={`first, ${new Date(first.observed_at).getFullYear()}`} />
                 </Row>
               </Rise>
             ) : null}
@@ -77,17 +78,6 @@ export default function SpeciesScreen() {
         renderItem={({ item, index }) => <SightingCard index={index + 3} sighting={item} compact pending={!!item.dirty} />}
         ListEmptyComponent={<Empty icon="binoculars-outline" title="Not on your list yet" body="Log a sighting and it will appear here." />}
       />
-    </View>
-  );
-}
-
-function Stat({ n, text, label }: { n?: number; text?: string; label: string }) {
-  return (
-    <View style={{ alignItems: 'center', gap: 2 }}>
-      <Text variant="heading">{text ?? n}</Text>
-      <Text variant="caption" muted>
-        {label}
-      </Text>
     </View>
   );
 }

@@ -22,7 +22,7 @@ interface Page {
   engagement: Map<string, Engagement>;
 }
 
-async function loadPage(before: string): Promise<Page> {
+async function loadPage(before?: string): Promise<Page> {
   const items = await fetchFeed(before, PAGE);
   const [profiles, sightingEng, listEng] = await Promise.all([
     signPhotoUrls(items.map((i) => (i.kind === 'sighting' ? i.payload.photo_path : null))).then(() => null),
@@ -45,11 +45,12 @@ export default function FeedScreen() {
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [moreError, setMoreError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      const p = await loadPage(new Date().toISOString());
+      const p = await loadPage();
       setItems(p.items);
       setProfiles(p.profiles);
       setEngagement(p.engagement);
@@ -71,6 +72,9 @@ export default function FeedScreen() {
       setProfiles((cur) => new Map([...cur, ...p.profiles]));
       setEngagement((cur) => new Map([...cur, ...p.engagement]));
       setDone(p.items.length < PAGE);
+      setMoreError(null);
+    } catch (e) {
+      setMoreError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoadingMore(false);
     }
@@ -120,7 +124,11 @@ export default function FeedScreen() {
           )
         }
         ListFooterComponent={
-          items?.length && done ? (
+          moreError ? (
+            <View style={{ alignItems: 'center', padding: spacing.lg }}>
+              <Button title="Couldn't load more. Retry" kind="secondary" onPress={more} />
+            </View>
+          ) : items?.length && done ? (
             <Text variant="caption" faint style={{ textAlign: 'center', padding: spacing.lg }}>
               You are all caught up.
             </Text>

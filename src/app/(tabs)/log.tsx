@@ -1,5 +1,5 @@
-import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -18,6 +18,16 @@ export default function LogScreen() {
   const [resetKey, setResetKey] = useState(0);
   const [lifer, setLifer] = useState<Lifer | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const lastReset = useRef(0);
+
+  // A form left open for a while has a stale time and location; start fresh when the tab comes back.
+  useFocusEffect(
+    useCallback(() => {
+      const now = Date.now();
+      if (lastReset.current && now - lastReset.current > 5 * 60 * 1000) setResetKey((k) => k + 1);
+      lastReset.current = now;
+    }, []),
+  );
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>

@@ -46,7 +46,7 @@ export default function SignIn() {
         </View>
         <AuthProviders />
         <Link href="/(auth)/sign-up" asChild>
-          <Text style={{ textAlign: 'center', color: colors.accent, fontWeight: '600' }}>New here? Create an account</Text>
+          <Text style={{ textAlign: 'center', color: colors.accent, fontFamily: fonts.semibold }}>New here? Create an account</Text>
         </Link>
       </Screen>
     </KeyboardAvoidingView>

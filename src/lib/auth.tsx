@@ -2,10 +2,13 @@ import type { Session } from '@supabase/supabase-js';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
 import * as Linking from 'expo-linking';
+import * as Network from 'expo-network';
+import Storage from 'expo-sqlite/kv-store';
 import * as WebBrowser from 'expo-web-browser';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { Platform } from 'react-native';
 
+import { invalidateProfile } from '@/lib/social';
 import { supabase } from '@/lib/supabase';
 import type { Profile } from '@/types/db';
 
@@ -34,10 +37,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // The profile is cached on device so an offline launch still has a name, home and settings.
   const loadProfile = useCallback(async (userId: string) => {
+    const key = `profile:${userId}`;
+    try {
+      const cached = await Storage.getItemAsync(key);
+      if (cached) setProfile(JSON.parse(cached) as Profile);
+    } catch {
+      // ignore a corrupt cache
+    }
     const { data } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
-    setProfile((data as Profile | null) ?? null);
+    if (data) {
+      setProfile(data as Profile);
+      Storage.setItemAsync(key, JSON.stringify(data)).catch(() => {});
+    }
   }, []);
+
+  // Retry the profile fetch when connectivity returns.
+  useEffect(() => {
+    if (!session || profile) return;
+    const sub = Network.addNetworkStateListener((s) => {
+      if (s.isConnected) loadProfile(session.user.id);
+    });
+    return () => sub.remove();
+  }, [session, profile, loadProfile]);
 
   useEffect(() => {
     let mounted = true;
@@ -93,9 +116,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const name = credential.fullName ? AppleAuthentication.formatFullName(credential.fullName) : '';
     if (name) {
       const { data } = await supabase.auth.getUser();
-      if (data.user) await supabase.from('profiles').update({ display_name: name }).eq('id', data.user.id);
+      if (data.user) {
+        await supabase.from('profiles').update({ display_name: name }).eq('id', data.user.id);
+        await loadProfile(data.user.id);
+      }
     }
-  }, []);
+  }, [loadProfile]);
 
   // Google via Supabase's hosted OAuth flow in a system browser, returning on the app scheme.
   const signInWithGoogle = useCallback(async () => {
@@ -133,6 +159,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!session) return;
       const { error } = await supabase.from('profiles').update(patch).eq('id', session.user.id);
       if (error) throw error;
+      invalidateProfile(session.user.id);
       await loadProfile(session.user.id);
     },
     [session, loadProfile],

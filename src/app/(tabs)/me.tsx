@@ -10,12 +10,14 @@ import { useLocalQuery } from '@/hooks/useLocalSightings';
 import { useAuth, useUserId } from '@/lib/auth';
 import * as db from '@/lib/db';
 import { fetchFollowedLists, fetchLists, fetchProfileStats } from '@/lib/social';
-import { spacing } from '@/lib/theme';
+import { spacing, useTheme } from '@/lib/theme';
+import { DEFAULT_USERNAME } from '@/lib/validation';
 
 export default function MeScreen() {
   const userId = useUserId();
   const { profile, signOut } = useAuth();
   const router = useRouter();
+  const { colors } = useTheme();
   const counts = useLocalQuery(() => db.stats(userId), [userId]);
   const { data, reload } = useAsync(async () => {
     const [stats, lists, followed] = await Promise.all([fetchProfileStats(userId), fetchLists(userId), fetchFollowedLists(userId)]);
@@ -44,6 +46,16 @@ export default function MeScreen() {
         localCounts={counts}
         right={<IconButton name="settings-outline" onPress={() => router.push('/settings')} />}
       />
+      {DEFAULT_USERNAME.test(profile.username) ? (
+        <Pressable onPress={() => router.push('/settings')} style={{ backgroundColor: colors.accentSoft, borderRadius: 14, padding: spacing.md }}>
+          <Text variant="label" style={{ color: colors.accent }}>
+            Pick a username
+          </Text>
+          <Text variant="caption" muted>
+            You are @{profile.username} for now. Choose a handle so friends can find you.
+          </Text>
+        </Pressable>
+      ) : null}
       <Row>
         <Chip label="Find people" icon="search" onPress={() => router.push('/search')} />
         <Chip label="Import CSV" icon="download-outline" onPress={() => router.push('/settings/import')} />

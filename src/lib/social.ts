@@ -8,6 +8,11 @@ function fail(error: { message: string } | null): void {
 
 const profileCache = new Map<string, PublicProfile>();
 
+/** Drop a cached profile (after the user edits their own). */
+export function invalidateProfile(id: string) {
+  profileCache.delete(id);
+}
+
 export async function fetchProfiles(ids: string[]): Promise<Map<string, PublicProfile>> {
   const missing = [...new Set(ids)].filter((id) => !profileCache.has(id));
   if (missing.length) {
@@ -113,8 +118,9 @@ export async function fetchUserLifeList(userId: string): Promise<LifeListRow[]> 
   return (data ?? []) as LifeListRow[];
 }
 
-export async function fetchFeed(before: string, pageSize = 30): Promise<FeedItem[]> {
-  const { data, error } = await supabase.rpc('feed', { before, page_size: pageSize });
+/** Omit `before` to let the server use its own clock (device clocks drift). */
+export async function fetchFeed(before: string | undefined, pageSize = 30): Promise<FeedItem[]> {
+  const { data, error } = await supabase.rpc('feed', before ? { before, page_size: pageSize } : { page_size: pageSize });
   fail(error);
   return (data ?? []) as FeedItem[];
 }
@@ -171,8 +177,11 @@ export async function replaceListItems(listId: string, items: Pick<ListItem, 'sp
   if (keep.length) del = del.not('id', 'in', `(${keep.join(',')})`);
   const { error: e2 } = await del;
   fail(e2);
-  // Normalise positions now that the old rows are gone.
-  await Promise.all(keep.map((id, position) => supabase.from('list_items').update({ position }).eq('id', id)));
+  // Normalise positions in one request now that the old rows are gone.
+  if (keep.length) {
+    const { error: e3 } = await supabase.from('list_items').upsert(keep.map((id, position) => ({ id, list_id: listId, position })), { onConflict: 'id' });
+    fail(e3);
+  }
 }
 
 export async function isFollowingList(userId: string, listId: string): Promise<boolean> {

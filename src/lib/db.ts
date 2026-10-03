@@ -1,5 +1,6 @@
 // Local SQLite store: the source of truth for the signed-in user's own sightings.
 // Rows carry `dirty` (needs push) and `deleted` (tombstone until the delete is pushed).
+import { File } from 'expo-file-system';
 import * as SQLite from 'expo-sqlite';
 import { useSyncExternalStore } from 'react';
 
@@ -217,36 +218,55 @@ function upsertRow(row: LocalSighting) {
 
 export function deleteSighting(id: string) {
   // Never pushed? Just drop it. Otherwise leave a tombstone for sync.
-  const r = db.getFirstSync<{ dirty: number; created_at: string; updated_at: string }>('select dirty, created_at, updated_at from sightings where id = ?', [id]);
+  const r = db.getFirstSync<{ dirty: number; local_photo_uri: string | null }>('select dirty, local_photo_uri from sightings where id = ?', [id]);
   if (!r) return;
+  deleteLocalFile(r.local_photo_uri);
   const neverSynced = r.dirty === 1 && !db.getFirstSync('select 1 from meta where key = ? ', [`synced:${id}`]);
   if (neverSynced) db.runSync('delete from sightings where id = ?', [id]);
-  else db.runSync('update sightings set deleted = 1, dirty = 1, updated_at = ? where id = ?', [new Date().toISOString(), id]);
+  else db.runSync('update sightings set deleted = 1, dirty = 1, local_photo_uri = null, updated_at = ? where id = ?', [new Date().toISOString(), id]);
   notify(true);
+}
+
+/** Remove a photo copy from the app's document directory. Never throws. */
+export function deleteLocalFile(uri: string | null | undefined) {
+  if (!uri || !uri.startsWith('file:')) return;
+  try {
+    const f = new File(uri);
+    if (f.exists) f.delete();
+  } catch {
+    // best effort
+  }
 }
 
 /** Remember a storage object to delete on the next sync (photo cleared or replaced). */
 export function queuePhotoRemoval(path: string) {
   db.runSync('insert or replace into meta (key, value) values (?, ?)', [`remove_photo:${path}`, '1']);
 }
+/** Paths queued for deletion that no live local row still points at (a re-attached photo reuses the path). */
 export function pendingPhotoRemovals(): string[] {
-  return db.getAllSync<{ key: string }>("select key from meta where key like 'remove_photo:%'").map((r) => r.key.slice('remove_photo:'.length));
+  const queued = db.getAllSync<{ key: string }>("select key from meta where key like 'remove_photo:%'").map((r) => r.key.slice('remove_photo:'.length));
+  return queued.filter((path) => {
+    const live = db.getFirstSync('select 1 from sightings where photo_path = ? and deleted = 0', [path]);
+    if (live) clearPhotoRemoval(path);
+    return !live;
+  });
 }
 export function clearPhotoRemoval(path: string) {
   db.runSync('delete from meta where key = ?', [`remove_photo:${path}`]);
 }
 
-/** Returns true if an import row would duplicate an existing one (species + day + ~100 m). */
-export function hasDuplicate(userId: string, speciesCode: string, observedAt: string, lat: number | null, lng: number | null): boolean {
-  const day = localDay(observedAt);
-  const rows = db.getAllSync<{ lat: number | null; lng: number | null }>(
-    'select lat, lng from sightings where user_id = ? and species_code = ? and local_day = ? and deleted = 0',
-    [userId, speciesCode, day],
+/** Import dedupe key: species + UTC date + coordinates to 3 decimals. Matches csv.ts and the server unique index. */
+export function dedupeKey(speciesCode: string, observedAtIso: string, lat: number | null, lng: number | null): string {
+  return `${speciesCode}|${observedAtIso.slice(0, 10)}|${lat?.toFixed(3) ?? ''}|${lng?.toFixed(3) ?? ''}`;
+}
+
+/** All dedupe keys already in the diary, for one-pass import checks. */
+export function existingDedupeKeys(userId: string): Set<string> {
+  const rows = db.getAllSync<{ species_code: string; observed_at: string; lat: number | null; lng: number | null }>(
+    'select species_code, observed_at, lat, lng from sightings where user_id = ? and deleted = 0',
+    [userId],
   );
-  return rows.some((r) => {
-    if (lat == null || r.lat == null || lng == null || r.lng == null) return lat == null && r.lat == null;
-    return Math.abs(r.lat - lat) < 0.001 && Math.abs(r.lng - lng) < 0.001;
-  });
+  return new Set(rows.map((r) => dedupeKey(r.species_code, r.observed_at, r.lat, r.lng)));
 }
 
 // ---------------------------------------------------------------- sync support
@@ -258,23 +278,29 @@ export function pendingCount(userId: string): number {
   return db.getFirstSync<{ n: number }>('select count(*) as n from sightings where user_id = ? and dirty = 1', [userId])?.n ?? 0;
 }
 
-export function markSynced(id: string, patch: { photo_path?: string | null } = {}) {
+/**
+ * Mark a row clean, but only if it has not been edited since the pushed copy was read
+ * (`pushedUpdatedAt`). An edit made during the upload stays dirty and is pushed next time.
+ */
+export function markSynced(id: string, pushedUpdatedAt: string, patch: { photo_path?: string | null } = {}) {
   db.withTransactionSync(() => {
     if (patch.photo_path !== undefined) db.runSync('update sightings set photo_path = ? where id = ?', [patch.photo_path, id]);
-    db.runSync('update sightings set dirty = 0 where id = ?', [id]);
+    db.runSync('update sightings set dirty = 0 where id = ? and updated_at = ?', [id, pushedUpdatedAt]);
     db.runSync('insert or replace into meta (key, value) values (?, ?)', [`synced:${id}`, '1']);
   });
 }
-export function markManySynced(ids: string[]) {
+export function markManySynced(rows: { id: string; updated_at: string }[]) {
   db.withTransactionSync(() => {
-    for (const id of ids) {
-      db.runSync('update sightings set dirty = 0 where id = ?', [id]);
-      db.runSync('insert or replace into meta (key, value) values (?, ?)', [`synced:${id}`, '1']);
+    for (const r of rows) {
+      db.runSync('update sightings set dirty = 0 where id = ? and updated_at = ?', [r.id, r.updated_at]);
+      db.runSync('insert or replace into meta (key, value) values (?, ?)', [`synced:${r.id}`, '1']);
     }
   });
 }
 
 export function removeRow(id: string) {
+  const r = db.getFirstSync<{ local_photo_uri: string | null }>('select local_photo_uri from sightings where id = ?', [id]);
+  deleteLocalFile(r?.local_photo_uri);
   db.runSync('delete from sightings where id = ?', [id]);
   db.runSync('delete from meta where key = ?', [`synced:${id}`]);
 }

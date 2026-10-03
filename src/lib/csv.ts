@@ -107,8 +107,9 @@ function monthIndex(abbr: string): number {
 }
 
 function num(s: string | undefined): number | null {
-  if (!s) return null;
-  const n = Number(s.trim());
+  const t = s?.trim();
+  if (!t) return null;
+  const n = Number(t);
   return Number.isFinite(n) ? n : null;
 }
 

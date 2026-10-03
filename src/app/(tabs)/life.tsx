@@ -73,7 +73,7 @@ export default function LifeListScreen() {
                   style={{ width: 52, height: 52, borderRadius: radius.md }}
                   fallback={
                     <View style={{ width: 52, height: 52, borderRadius: radius.md, backgroundColor: colors.accentSoft, alignItems: 'center', justifyContent: 'center' }}>
-                      <Text style={{ color: colors.accent, fontWeight: '700' }}>{sp?.common.charAt(0)}</Text>
+                      <Text style={{ color: colors.accent, fontFamily: fonts.displaySemi }}>{sp?.common.charAt(0)}</Text>
                     </View>
                   }
                 />

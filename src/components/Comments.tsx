@@ -43,9 +43,13 @@ export function Comments({ type, id, onCountChange }: { type: TargetType; id: st
         text: 'Delete',
         style: 'destructive',
         onPress: async () => {
-          await deleteComment(cid);
-          onCountChange?.(-1);
-          reload();
+          try {
+            await deleteComment(cid);
+            onCountChange?.(-1);
+            reload();
+          } catch (e) {
+            Alert.alert('Could not delete', e instanceof Error ? e.message : String(e));
+          }
         },
       },
     ]);

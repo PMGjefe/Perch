@@ -9,9 +9,8 @@ import { Avatar, BottomInset, Button, Input, Row, Screen, Text } from '@/compone
 import { useAuth, useUserId } from '@/lib/auth';
 import type { LatLng } from '@/lib/geo';
 import { AVATAR_BUCKET, avatarPublicUrl, supabase } from '@/lib/supabase';
-import { radius, spacing, useTheme } from '@/lib/theme';
-
-const USERNAME = /^[a-z0-9_]{3,24}$/;
+import { fonts, radius, spacing, useTheme } from '@/lib/theme';
+import { USERNAME } from '@/lib/validation';
 
 export default function Settings() {
   const userId = useUserId();
@@ -65,7 +64,7 @@ export default function Settings() {
       <Screen scroll style={{ gap: spacing.xl }}>
         <Pressable onPress={pickAvatar} style={{ alignItems: 'center', gap: spacing.sm }}>
           <Avatar uri={avatar} name={displayName || username} size={88} />
-          <Text variant="caption" style={{ color: colors.accent, fontWeight: '600' }}>
+          <Text variant="caption" style={{ color: colors.accent, fontFamily: fonts.semibold }}>
             Change photo
           </Text>
         </Pressable>

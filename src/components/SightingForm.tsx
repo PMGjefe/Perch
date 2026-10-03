@@ -93,8 +93,12 @@ export function SightingForm({ userId, existing, onSaved, resetKey }: Props) {
       if (photoChanged) {
         localPhoto = photo?.kind === 'local' ? await persistPhoto(photo.uri, id) : null;
         photoPath = photo?.kind === 'remote' ? photo.path : null; // cleared or replaced: re-upload on sync
-        // Photo cleared: make sure the old storage object goes away too (a replacement overwrites the same path).
-        if (!photo && existing?.photo_path) db.queuePhotoRemoval(existing.photo_path);
+        if (existing?.local_photo_uri && existing.local_photo_uri !== localPhoto) db.deleteLocalFile(existing.local_photo_uri);
+        // Cleared: delete the storage object on sync. Replaced: the upload overwrites it, so cancel any queued removal.
+        if (existing?.photo_path) {
+          if (!photo) db.queuePhotoRemoval(existing.photo_path);
+          else db.clearPhotoRemoval(existing.photo_path);
+        }
       }
       const row = db.saveSighting({
         id,
@@ -209,8 +213,8 @@ export function SightingForm({ userId, existing, onSaved, resetKey }: Props) {
 async function persistPhoto(uri: string, id: string): Promise<string> {
   const dir = new Directory(Paths.document, 'photos');
   if (!dir.exists) dir.create();
-  const dest = new File(dir, `${id}.jpg`);
-  if (dest.exists) dest.delete();
+  // Unique name per pick: expo-image caches by URI, so reusing a path would keep showing the old photo.
+  const dest = new File(dir, `${id}-${Date.now()}.jpg`);
   new File(uri).copy(dest);
   return dest.uri;
 }

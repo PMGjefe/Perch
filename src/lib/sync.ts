@@ -47,8 +47,14 @@ export async function isOnline(): Promise<boolean> {
   }
 }
 
+let rerunFor: string | null = null;
+
+/** Single-flight: a request made while a sync is running queues exactly one follow-up run. */
 export function syncNow(userId: string): Promise<SyncResult> {
-  if (inFlight) return inFlight;
+  if (inFlight) {
+    rerunFor = userId;
+    return inFlight;
+  }
   setStatus({ syncing: true });
   inFlight = run(userId)
     .then((r) => {
@@ -57,11 +63,16 @@ export function syncNow(userId: string): Promise<SyncResult> {
     })
     .finally(() => {
       inFlight = null;
+      if (rerunFor) {
+        const next = rerunFor;
+        rerunFor = null;
+        void syncNow(next);
+      }
     });
   return inFlight;
 }
 
-const PAGE = 1000; // PostgREST max_rows in supabase/config.toml
+const PAGE = 1000; // request size; loops stop on an empty page so a smaller server cap is safe
 const PUSH_CHUNK = 200;
 
 async function run(userId: string): Promise<SyncResult> {
@@ -94,7 +105,7 @@ async function run(userId: string): Promise<SyncResult> {
         const photoPath = await uploadPhoto(userId, row.id, row.local_photo_uri!);
         const { error } = await supabase.from('sightings').upsert(toPayload(row, userId, photoPath), { onConflict: 'id' });
         if (error) throw error;
-        db.markSynced(row.id, { photo_path: photoPath });
+        db.markSynced(row.id, row.updated_at, { photo_path: photoPath });
         pushed++;
       } catch (e) {
         failures.push(errMsg(e));
@@ -104,7 +115,7 @@ async function run(userId: string): Promise<SyncResult> {
       const chunk = plain.slice(i, i + PUSH_CHUNK);
       const { error } = await supabase.from('sightings').upsert(chunk.map((r) => toPayload(r, userId, r.photo_path)), { onConflict: 'id' });
       if (!error) {
-        db.markManySynced(chunk.map((r) => r.id));
+        db.markManySynced(chunk.map((r) => ({ id: r.id, updated_at: r.updated_at })));
         pushed += chunk.length;
         continue;
       }
@@ -112,7 +123,7 @@ async function run(userId: string): Promise<SyncResult> {
       for (const row of chunk) {
         const { error: rowErr } = await supabase.from('sightings').upsert(toPayload(row, userId, row.photo_path), { onConflict: 'id' });
         if (!rowErr) {
-          db.markSynced(row.id);
+          db.markSynced(row.id, row.updated_at);
           pushed++;
         } else if (rowErr.code === '23505' && row.source !== 'app') {
           // Imported row that already exists server-side (same species/day/place): drop the local copy.
@@ -143,17 +154,19 @@ async function run(userId: string): Promise<SyncResult> {
         db.setMeta(`last_pull:${userId}`, rows[rows.length - 1].updated_at);
         pulled += rows.length;
       }
-      if (rows.length < PAGE) break;
-      from += PAGE;
+      if (!rows.length) break;
+      from += rows.length;
     }
 
     // ---- id sweep for rows deleted elsewhere, paged so nothing beyond the first page is mistaken for deleted
     const serverIds = new Set<string>();
-    for (let start = 0; ; start += PAGE) {
+    for (let start = 0; ; ) {
       const { data, error } = await supabase.from('sightings').select('id').eq('user_id', userId).order('id').range(start, start + PAGE - 1);
       if (error) throw error;
-      for (const r of (data ?? []) as { id: string }[]) serverIds.add(r.id);
-      if ((data ?? []).length < PAGE) break;
+      const ids = (data ?? []) as { id: string }[];
+      for (const r of ids) serverIds.add(r.id);
+      if (!ids.length) break;
+      start += ids.length;
     }
     db.pruneMissing(userId, serverIds);
     db.setMeta(`last_sync_at:${userId}`, new Date().toISOString());

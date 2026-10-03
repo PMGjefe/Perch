@@ -6,9 +6,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AuthProviders } from '@/components/AuthProviders';
 import { Button, Input, Screen, Text } from '@/components/ui';
 import { friendlyAuthError, useAuth } from '@/lib/auth';
-import { spacing, useTheme } from '@/lib/theme';
-
-const USERNAME = /^[a-z0-9_]{3,24}$/;
+import { fonts, spacing, useTheme } from '@/lib/theme';
+import { USERNAME } from '@/lib/validation';
 
 export default function SignUp() {
   const { colors } = useTheme();
@@ -49,7 +48,7 @@ export default function SignUp() {
         </View>
         <AuthProviders />
         <Link href="/(auth)/sign-in" asChild>
-          <Text style={{ textAlign: 'center', color: colors.accent, fontWeight: '600' }}>Already have an account? Sign in</Text>
+          <Text style={{ textAlign: 'center', color: colors.accent, fontFamily: fonts.semibold }}>Already have an account? Sign in</Text>
         </Link>
       </Screen>
     </KeyboardAvoidingView>

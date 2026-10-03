@@ -22,7 +22,11 @@ export default function ImportScreen() {
   const [visibility, setVisibility] = useState<Visibility>('public');
   const [busy, setBusy] = useState(false);
 
-  const fresh = useMemo(() => (result ? result.rows.filter((r) => !db.hasDuplicate(userId, r.species_code, r.observed_at, r.lat, r.lng)) : []), [result, userId]);
+  const fresh = useMemo(() => {
+    if (!result) return [];
+    const have = db.existingDedupeKeys(userId);
+    return result.rows.filter((r) => !have.has(db.dedupeKey(r.species_code, r.observed_at, r.lat, r.lng)));
+  }, [result, userId]);
   const alreadyHave = result ? result.rows.length - fresh.length : 0;
 
   const pick = async () => {

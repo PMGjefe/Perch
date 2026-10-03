@@ -4,7 +4,7 @@ import { FlatList, Modal, Pressable, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Divider, IconButton, Text } from '@/components/ui';
-import { searchSpecies, SPECIES, type SpeciesEntry } from '@/lib/taxonomy';
+import { searchSpecies, speciesByCode, type SpeciesEntry } from '@/lib/taxonomy';
 import { radius, spacing, useTheme } from '@/lib/theme';
 
 interface Props {
@@ -22,8 +22,7 @@ export function SpeciesPicker({ visible, onClose, onSelect, suggestions = [] }: 
 
   const results = useMemo(() => {
     if (q.trim()) return searchSpecies(q);
-    const byCode = new Map(SPECIES.map((s) => [s.code, s]));
-    return suggestions.map((c) => byCode.get(c)).filter((s): s is SpeciesEntry => !!s);
+    return suggestions.map((c) => speciesByCode(c)).filter((s): s is SpeciesEntry => !!s);
   }, [q, suggestions]);
 
   const pick = (s: SpeciesEntry) => {

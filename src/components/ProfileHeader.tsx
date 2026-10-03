@@ -2,6 +2,7 @@ import { Link } from 'expo-router';
 import React from 'react';
 import { Pressable, View } from 'react-native';
 
+import { Stat } from '@/components/Stat';
 import { Avatar, Row, Text } from '@/components/ui';
 import { spacing, useTheme } from '@/lib/theme';
 import type { ProfileStats, PublicProfile } from '@/types/db';
@@ -22,30 +23,19 @@ export function ProfileHeader({ profile, stats, localCounts, right }: { profile:
         {right}
       </Row>
       <Row style={{ justifyContent: 'space-around', backgroundColor: colors.surface, borderRadius: 14, paddingVertical: spacing.md, borderWidth: 1, borderColor: colors.border }}>
-        <Stat n={species} label="species" />
-        <Stat n={sightings} label="sightings" />
+        <Stat value={species} label="species" />
+        <Stat value={sightings} label="sightings" />
         <Link href={{ pathname: '/user/[id]/followers', params: { id: profile.id, tab: 'followers' } }} asChild>
           <Pressable>
-            <Stat n={stats?.followers ?? 0} label="followers" />
+            <Stat value={stats?.followers ?? 0} label="followers" />
           </Pressable>
         </Link>
         <Link href={{ pathname: '/user/[id]/followers', params: { id: profile.id, tab: 'following' } }} asChild>
           <Pressable>
-            <Stat n={stats?.following ?? 0} label="following" />
+            <Stat value={stats?.following ?? 0} label="following" />
           </Pressable>
         </Link>
       </Row>
-    </View>
-  );
-}
-
-function Stat({ n, label }: { n: number; label: string }) {
-  return (
-    <View style={{ alignItems: 'center' }}>
-      <Text variant="heading">{n}</Text>
-      <Text variant="caption" muted>
-        {label}
-      </Text>
     </View>
   );
 }
