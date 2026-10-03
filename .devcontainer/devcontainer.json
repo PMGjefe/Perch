@@ -1,0 +1,6 @@
+{
+  "name": "Perch",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:22",
+  "postCreateCommand": "npm install --legacy-peer-deps && npm install -g @expo/ngrok@^4.1.0",
+  "forwardPorts": [8081]
+}

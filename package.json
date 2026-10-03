@@ -59,7 +59,8 @@
     "check": "npm run typecheck && npm run lint && npm test",
     "build:taxonomy": "node scripts/build-taxonomy.mjs",
     "test:db": "./scripts/test-migrations.sh",
-    "test": "jest"
+    "test": "jest",
+    "ipad": "bash scripts/ipad.sh"
   },
   "private": true,
   "jest": {
