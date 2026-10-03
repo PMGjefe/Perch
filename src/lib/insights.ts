@@ -114,3 +114,13 @@ export function daylight(date = new Date()): number {
   if (h < 21) return 1 - (h - 18) / 3; // dusk
   return 0;
 }
+
+/** Light-aware one-liner for the diary masthead. Dawn and dusk are when birders are out; say so. */
+export function greeting(now = new Date()): string {
+  const d = daylight(now);
+  const h = now.getHours();
+  if (d === 0) return h < 5 ? 'Owls, nightjars, and the first chorus soon.' : 'Nocturnal flight calls count too.';
+  if (d < 1 && h < 12) return 'Dawn chorus hours.';
+  if (d < 1) return 'Golden hour. Roost flights and late songs.';
+  return 'What did you see?';
+}

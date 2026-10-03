@@ -1,21 +1,21 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
-import { FlatList, Pressable, View } from 'react-native';
+import { FlatList, View } from 'react-native';
 
 import { Filters } from '@/components/Filters';
 import { SightingCard } from '@/components/SightingCard';
 import { SightingsMap } from '@/components/SightingsMap';
-import { useSyncState } from '@/components/SyncProvider';
+import { SyncDot } from '@/components/SyncDot';
 import { useBottomPadding } from '@/components/TabBarInset';
 import { Button, Chip, Empty, Row, Text } from '@/components/ui';
 import { useLocalQuery, useLocalSightings } from '@/hooks/useLocalSightings';
 import { useAuth, useUserId } from '@/lib/auth';
 import * as db from '@/lib/db';
 import { haversineM } from '@/lib/geo';
-import { groupOutings } from '@/lib/insights';
+import { greeting, groupOutings } from '@/lib/insights';
 import { usePrefetchPhotoUrls } from '@/lib/photos';
-import { formatDay } from '@/lib/format';
+import { formatDay, formatLongDay, plural } from '@/lib/format';
 import { spacing, useTheme } from '@/lib/theme';
 
 export default function DiaryScreen() {
@@ -24,7 +24,6 @@ export default function DiaryScreen() {
   const { profile } = useAuth();
   const { colors } = useTheme();
   const router = useRouter();
-  const { pending, syncing, lastError, sync } = useSyncState();
   const [mode, setMode] = useState<'list' | 'map'>('list');
   const [year, setYear] = useState<number | null>(null);
   const [place, setPlace] = useState<string | null>(null);
@@ -35,27 +34,46 @@ export default function DiaryScreen() {
   const life = useLocalQuery(() => db.lifeList(userId), [userId]);
   const firstSeen = useMemo(() => new Map(life.map((e) => [e.species_code, e.first_sighting_id])), [life]);
   // Outings: same day, same patch. Rows are flattened so one FlatList still virtualises everything.
-  const rows = useMemo(() => groupOutings(sightings, firstSeen).flatMap((o) => [{ kind: 'outing' as const, outing: o }, ...o.sightings.map((s) => ({ kind: 'sighting' as const, s, key: s.id }))]), [sightings, firstSeen]);
+  const outings = useMemo(() => groupOutings(sightings, firstSeen), [sightings, firstSeen]);
+  const rows = useMemo(() => outings.flatMap((o) => [{ kind: 'outing' as const, outing: o }, ...o.sightings.map((s) => ({ kind: 'sighting' as const, s, key: s.id }))]), [outings]);
   usePrefetchPhotoUrls(sightings.filter((s) => !s.local_photo_uri).map((s) => s.photo_path));
 
   // Preview how others see pins near home.
   const home = profile?.hide_home && profile.home_lat != null && profile.home_lng != null ? { lat: profile.home_lat, lng: profile.home_lng } : null;
   const fuzzPreview = (s: { lat: number | null; lng: number | null }) => !!home && s.lat != null && s.lng != null && haversineM({ lat: s.lat, lng: s.lng }, home) <= 500;
 
+  // Masthead: today's date, a light-aware greeting, and where you last were. Filters swap the greeting for the count.
+  const now = new Date();
+  const todayKey = db.localDay(now.toISOString());
+  const filtered = year != null || place != null;
+  const latest = outings[0];
+  let outingLine: string | null = null;
+  if (!filtered && latest) {
+    const where = latest.place ? ` at ${latest.place}` : '';
+    const species = plural(latest.speciesCount, 'species', 'species');
+    if (latest.day === todayKey) outingLine = `Out today · ${species} so far${where}`;
+    else {
+      const day = formatDay(latest.sightings[0].observed_at, now);
+      outingLine = `Last outing ${day === 'Yesterday' ? 'yesterday' : day} · ${species}${where}`;
+    }
+  }
+
   const header = (
     <View style={{ backgroundColor: colors.bg }}>
-      <Row style={{ justifyContent: 'space-between', paddingHorizontal: spacing.lg, paddingTop: spacing.sm }}>
-        <View>
-          <Text variant="title">{sightings.length} sightings</Text>
-          {syncing || lastError || pending ? (
-            <Pressable onPress={() => sync()}>
-              <Text variant="caption" muted>
-                {syncing ? 'Backing up…' : lastError ? 'Not backed up yet · tap to retry' : `${pending} not backed up yet`}
-              </Text>
-            </Pressable>
+      <Row style={{ justifyContent: 'space-between', alignItems: 'flex-start', paddingHorizontal: spacing.lg, paddingTop: spacing.sm }}>
+        <View style={{ flex: 1, gap: 2 }}>
+          <Text variant="title" accessibilityRole="header">
+            {formatLongDay(now)}
+          </Text>
+          <Text muted>{filtered ? `${plural(sightings.length, 'sighting')}${year ? ` in ${year}` : ''}${place ? ` at ${place}` : ''}` : greeting(now)}</Text>
+          {outingLine ? (
+            <Text variant="caption" faint>
+              {outingLine}
+            </Text>
           ) : null}
         </View>
-        <Row>
+        <Row style={{ minHeight: 36 }}>
+          <SyncDot />
           <Chip label="List" icon="list" active={mode === 'list'} onPress={() => setMode('list')} />
           <Chip label="Map" icon="map" active={mode === 'map'} onPress={() => setMode('map')} />
         </Row>
