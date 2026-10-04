@@ -1,4 +1,6 @@
+import { Image } from 'expo-image';
 import { Link, Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 import React, { useMemo } from 'react';
 import { FlatList, Pressable, View } from 'react-native';
 
@@ -8,6 +10,7 @@ import { SightingsMap } from '@/components/SightingsMap';
 import { Stat } from '@/components/Stat';
 import { useBottomPadding } from '@/components/TabBarInset';
 import { Empty, Row, Text } from '@/components/ui';
+import { useAsync } from '@/hooks/useAsync';
 import { useLocalQuery, useLocalSightings } from '@/hooks/useLocalSightings';
 import { useUserId } from '@/lib/auth';
 import * as db from '@/lib/db';
@@ -15,6 +18,7 @@ import { formatDate } from '@/lib/format';
 import { MONTHS_SHORT, monthHistogram } from '@/lib/insights';
 import { speciesByCode } from '@/lib/taxonomy';
 import { fonts, radius, spacing, useTheme } from '@/lib/theme';
+import { fetchSpeciesSummary } from '@/lib/wiki';
 
 export default function SpeciesScreen() {
   const { code } = useLocalSearchParams<{ code: string }>();
@@ -30,6 +34,7 @@ export default function SpeciesScreen() {
   const places = useMemo(() => new Set(sightings.map((s) => s.place_name).filter(Boolean)).size, [sightings]);
   const withPins = sightings.filter((s) => s.lat != null);
   const months = useMemo(() => monthHistogram(sightings), [sightings]);
+  const { data: about } = useAsync(() => fetchSpeciesSummary(sp?.sci ?? '', { get: db.getMeta, set: db.setMeta }), [sp?.sci]);
   // Other species of the same family on the life list, in taxonomic order.
   const related = useMemo(() => {
     if (!sp) return [];
@@ -65,6 +70,21 @@ export default function SpeciesScreen() {
                 ) : null}
               </View>
             </Rise>
+            {about ? (
+              <Rise index={1}>
+                <View style={{ gap: spacing.sm }}>
+                  {about.thumbnail ? <Image source={{ uri: about.thumbnail }} style={{ width: '100%', height: 220, borderRadius: radius.lg, backgroundColor: colors.surfaceAlt }} contentFit="cover" transition={150} /> : null}
+                  <Text style={{ fontSize: 16, lineHeight: 24 }} numberOfLines={8}>
+                    {about.extract}
+                  </Text>
+                  <Pressable onPress={() => WebBrowser.openBrowserAsync(about.url)} hitSlop={8} style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
+                    <Text variant="caption" muted>
+                      From Wikipedia · read more
+                    </Text>
+                  </Pressable>
+                </View>
+              </Rise>
+            ) : null}
             {first ? (
               <Rise index={1}>
                 <Row style={{ backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.md, justifyContent: 'space-around' }}>
