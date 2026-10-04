@@ -36,6 +36,13 @@ export function relativeTime(iso: string): string {
   return formatDate(iso, new Date(iso).getFullYear() !== new Date().getFullYear());
 }
 
+/** 950, 12K, 1.2M: for counts that only need a sense of scale. */
+export function compactNumber(n: number): string {
+  if (n < 1000) return String(n);
+  if (n < 1_000_000) return `${Math.round(n / 1000)}K`;
+  return `${(n / 1_000_000).toFixed(n < 10_000_000 ? 1 : 0)}M`;
+}
+
 export function plural(n: number, one: string, many = `${one}s`): string {
   return `${n} ${n === 1 ? one : many}`;
 }

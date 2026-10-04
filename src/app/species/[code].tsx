@@ -14,7 +14,8 @@ import { useAsync } from '@/hooks/useAsync';
 import { useLocalQuery, useLocalSightings } from '@/hooks/useLocalSightings';
 import { useUserId } from '@/lib/auth';
 import * as db from '@/lib/db';
-import { formatDate } from '@/lib/format';
+import { compactNumber, formatDate } from '@/lib/format';
+import { fetchGlobalCount } from '@/lib/inat';
 import { MONTHS_SHORT, monthHistogram } from '@/lib/insights';
 import { speciesByCode } from '@/lib/taxonomy';
 import { fonts, radius, spacing, useTheme } from '@/lib/theme';
@@ -35,6 +36,7 @@ export default function SpeciesScreen() {
   const withPins = sightings.filter((s) => s.lat != null);
   const months = useMemo(() => monthHistogram(sightings), [sightings]);
   const { data: about } = useAsync(() => fetchSpeciesSummary(sp?.sci ?? '', { get: db.getMeta, set: db.setMeta }), [sp?.sci]);
+  const { data: worldCount } = useAsync(() => fetchGlobalCount(sp?.sci ?? '', { get: db.getMeta, set: db.setMeta }), [sp?.sci]);
   // Other species of the same family on the life list, in taxonomic order.
   const related = useMemo(() => {
     if (!sp) return [];
@@ -82,6 +84,11 @@ export default function SpeciesScreen() {
                       From Wikipedia · read more
                     </Text>
                   </Pressable>
+                  {worldCount != null ? (
+                    <Text variant="caption" muted>
+                      {compactNumber(worldCount)} observations worldwide on iNaturalist
+                    </Text>
+                  ) : null}
                 </View>
               </Rise>
             ) : null}

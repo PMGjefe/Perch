@@ -11,12 +11,16 @@ interface Props {
   place: string | null;
   onYear: (y: number | null) => void;
   onPlace: (p: string | null) => void;
+  /** When given, a "With photos" chip toggles this. */
+  withPhoto?: boolean;
+  onWithPhoto?: (v: boolean) => void;
 }
 
 /** Year + place chip filters shared by life list and diary. */
-export function Filters({ years, places, year, place, onYear, onPlace }: Props) {
+export function Filters({ years, places, year, place, onYear, onPlace, withPhoto, onWithPhoto }: Props) {
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm }}>
+      {onWithPhoto ? <Chip label="With photos" icon="image-outline" active={!!withPhoto} onPress={() => onWithPhoto(!withPhoto)} /> : null}
       <Chip label="All time" active={year === null} onPress={() => onYear(null)} />
       {years.map((y) => (
         <Chip key={y} label={String(y)} active={year === y} onPress={() => onYear(year === y ? null : y)} />

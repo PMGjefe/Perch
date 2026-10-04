@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
-import { AppState, FlatList, View } from 'react-native';
+import { AppState, FlatList, Pressable, StyleSheet, View } from 'react-native';
 
 import { Filters } from '@/components/Filters';
 import { SightingCard } from '@/components/SightingCard';
@@ -14,9 +14,10 @@ import { useAuth, useUserId } from '@/lib/auth';
 import * as db from '@/lib/db';
 import { haversineM } from '@/lib/geo';
 import { groupOutings, outingLine } from '@/lib/insights';
+import { speciesByCode } from '@/lib/taxonomy';
 import { usePrefetchPhotoUrls } from '@/lib/photos';
 import { formatDay, formatLongDay, plural } from '@/lib/format';
-import { spacing, useTheme } from '@/lib/theme';
+import { radius, spacing, useTheme } from '@/lib/theme';
 
 export default function DiaryScreen() {
   const userId = useUserId();
@@ -27,7 +28,8 @@ export default function DiaryScreen() {
   const [mode, setMode] = useState<'list' | 'map'>('list');
   const [year, setYear] = useState<number | null>(null);
   const [place, setPlace] = useState<string | null>(null);
-  const filter = useMemo(() => ({ year, place }), [year, place]);
+  const [withPhoto, setWithPhoto] = useState(false);
+  const filter = useMemo(() => ({ year, place, withPhoto }), [year, place, withPhoto]);
   const sightings = useLocalSightings(userId, filter);
   const years = useLocalQuery(() => db.years(userId), [userId]);
   const places = useLocalQuery(() => db.places(userId), [userId]);
@@ -44,7 +46,9 @@ export default function DiaryScreen() {
 
   // Masthead: today's date, the count, and where you last were.
   const now = useMastheadClock();
-  const filtered = year != null || place != null;
+  const filtered = year != null || place != null || withPhoto;
+  const today = db.localDay(now.toISOString());
+  const memories = useLocalQuery(() => db.onThisDay(userId, today.slice(5), today.slice(0, 4)), [userId, today]);
   const line = filtered ? null : outingLine(outings[0], now);
 
   const header = (
@@ -73,7 +77,25 @@ export default function DiaryScreen() {
           </Row>
         </Row>
       </View>
-      <Filters years={years} places={places} year={year} place={place} onYear={setYear} onPlace={setPlace} />
+      <Filters years={years} places={places} year={year} place={place} onYear={setYear} onPlace={setPlace} withPhoto={withPhoto} onWithPhoto={setWithPhoto} />
+      {!filtered && memories.length ? (
+        <View style={{ marginHorizontal: spacing.lg, marginTop: spacing.xs, padding: spacing.md, borderRadius: radius.lg, backgroundColor: colors.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border, gap: spacing.xs }}>
+          <Text variant="label" muted>
+            On this day
+          </Text>
+          {memories.slice(0, 3).map((m) => (
+            <Pressable key={m.id} onPress={() => router.push({ pathname: '/sighting/[id]', params: { id: m.id } })} style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1, flexDirection: 'row', gap: spacing.sm, alignItems: 'baseline' })}>
+              <Text variant="caption" muted style={{ width: 36 }}>
+                {db.localDay(m.observed_at).slice(0, 4)}
+              </Text>
+              <Text variant="species" numberOfLines={1} style={{ flex: 1 }}>
+                {speciesByCode(m.species_code)?.common ?? m.species_code}
+                {m.place_name ? <Text variant="caption" muted>{`  ${m.place_name}`}</Text> : null}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
     </View>
   );
 

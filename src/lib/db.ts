@@ -87,6 +87,7 @@ export interface SightingFilter {
   year?: number | null;
   place?: string | null;
   speciesCode?: string | null;
+  withPhoto?: boolean;
 }
 
 function filterSql(f: SightingFilter | undefined, params: (string | number)[]): string {
@@ -103,6 +104,7 @@ function filterSql(f: SightingFilter | undefined, params: (string | number)[]): 
     sql += ' and species_code = ?';
     params.push(f.speciesCode);
   }
+  if (f?.withPhoto) sql += ' and (photo_path is not null or local_photo_uri is not null)';
   return sql;
 }
 
@@ -368,5 +370,14 @@ export function placeAnchors(userId: string): { place: string; lat: number; lng:
   return db.getAllSync<{ place: string; lat: number; lng: number; n: number }>(
     "select place_name as place, avg(lat) as lat, avg(lng) as lng, count(*) as n from sightings where user_id = ? and deleted = 0 and lat is not null and lng is not null and place_name is not null and place_name <> '' group by place_name order by n desc",
     [userId],
+  );
+}
+
+// ---- On this day
+/** Sightings from the same calendar day in earlier years, newest year first. `monthDay` is MM-DD. */
+export function onThisDay(userId: string, monthDay: string, excludeYear: string, limit = 6): LocalSighting[] {
+  return db.getAllSync<LocalSighting>(
+    'select * from sightings where user_id = ? and deleted = 0 and substr(local_day, 6, 5) = ? and substr(local_day, 1, 4) <> ? order by observed_at desc limit ?',
+    [userId, monthDay, excludeYear, limit],
   );
 }
