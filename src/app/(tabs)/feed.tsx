@@ -3,7 +3,7 @@ import React, { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, View } from 'react-native';
 
 import { ListCard } from '@/components/ListCard';
-import { SightingCard } from '@/components/SightingCard';
+import { FeedPost } from '@/components/FeedPost';
 import { FeedSkeleton } from '@/components/Skeleton';
 import { Button, Empty, Text } from '@/components/ui';
 import { useBottomPadding } from '@/components/TabBarInset';
@@ -110,7 +110,7 @@ export default function FeedScreen() {
       <FlatList
         data={items ?? []}
         keyExtractor={(i) => `${i.kind}:${i.payload.id}`}
-        contentContainerStyle={{ padding: spacing.lg, gap: spacing.lg, paddingBottom: bottomPad }}
+        contentContainerStyle={{ paddingBottom: bottomPad }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.accent} />}
         initialNumToRender={4}
         maxToRenderPerBatch={4}
@@ -118,11 +118,13 @@ export default function FeedScreen() {
         removeClippedSubviews
         onEndReached={more}
         onEndReachedThreshold={0.6}
-        renderItem={({ item, index }) =>
+        renderItem={({ item }) =>
           item.kind === 'sighting' ? (
-            <SightingCard index={index} sighting={item.payload} profile={profiles.get(item.payload.user_id)} engagement={engagement.get(item.payload.id)} onLike={() => toggleLike('sighting', item.payload.id)} />
+            <FeedPost sighting={item.payload} profile={profiles.get(item.payload.user_id)} engagement={engagement.get(item.payload.id)} onLike={() => toggleLike('sighting', item.payload.id)} />
           ) : (
-            <ListCard list={item.payload} profile={profiles.get(item.payload.user_id)} engagement={engagement.get(item.payload.id)} onLike={() => toggleLike('list', item.payload.id)} />
+            <View style={{ padding: spacing.lg, borderBottomWidth: 0.5, borderBottomColor: colors.border }}>
+              <ListCard list={item.payload} profile={profiles.get(item.payload.user_id)} engagement={engagement.get(item.payload.id)} onLike={() => toggleLike('list', item.payload.id)} />
+            </View>
           )
         }
         ListEmptyComponent={

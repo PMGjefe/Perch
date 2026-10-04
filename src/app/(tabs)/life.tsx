@@ -1,20 +1,19 @@
-import { Link, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
-import { FlatList, Pressable, View } from 'react-native';
+import { ActionSheetIOS, Alert, FlatList, Platform, Pressable, View } from 'react-native';
 
-import { CountUp } from '@/components/CountUp';
-import { Filters } from '@/components/Filters';
-import { Rise } from '@/components/motion';
 import { Photo } from '@/components/Photo';
-import { Button, Chip, Empty, Row, Text } from '@/components/ui';
+import { Segmented } from '@/components/Segmented';
+import { Button, Empty, IconButton, Row, Text } from '@/components/ui';
 import { useLocalQuery } from '@/hooks/useLocalSightings';
 import { usePrefetchPhotoUrls } from '@/lib/photos';
 import { useBottomPadding } from '@/components/TabBarInset';
 import { useUserId } from '@/lib/auth';
 import * as db from '@/lib/db';
-import { formatDate, relativeTime } from '@/lib/format';
+import { formatDate, plural } from '@/lib/format';
 import { speciesByCode } from '@/lib/taxonomy';
-import { fonts, radius, spacing, useTheme } from '@/lib/theme';
+import { spacing, useTheme } from '@/lib/theme';
 
 export default function LifeListScreen() {
   const userId = useUserId();
@@ -30,7 +29,6 @@ export default function LifeListScreen() {
   const unfiltered = !year && !place;
   const thisYear = String(new Date().getFullYear());
   const lifersThisYear = unfiltered ? entries.filter((e) => db.localDay(e.first_seen).startsWith(thisYear)).length : 0;
-  const latest = unfiltered ? entries[0] : undefined;
   usePrefetchPhotoUrls(entries.map((e) => e.photo));
   // Life-list number = rank by first-seen date, in either order.
   const rank = useMemo(() => new Map(entries.map((e, i) => [e.species_code, entries.length - i])), [entries]);
@@ -52,6 +50,28 @@ export default function LifeListScreen() {
     return out;
   }, [entries, order]);
 
+  const choose = (title: string, options: string[], onPick: (i: number) => void) => {
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions({ title, options: [...options, 'Cancel'], cancelButtonIndex: options.length }, (i) => {
+        if (i < options.length) onPick(i);
+      });
+    } else {
+      Alert.alert(title, undefined, [...options.map((o, i) => ({ text: o, onPress: () => onPick(i) })), { text: 'Cancel', style: 'cancel' as const }]);
+    }
+  };
+  const openFilter = () => {
+    const items = ['By year', 'By place', ...(unfiltered ? [] : ['Clear filters'])];
+    choose('Filter', items, (i) => {
+      if (i === 0) choose('Year', years.map(String), (j) => setYear(years[j]));
+      else if (i === 1) choose('Place', places.slice(0, 20), (j) => setPlace(places[j]));
+      else {
+        setYear(null);
+        setPlace(null);
+      }
+    });
+  };
+  const open = (code: string) => router.push({ pathname: '/species/[code]', params: { code } });
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <FlatList
@@ -59,40 +79,28 @@ export default function LifeListScreen() {
         keyExtractor={(r) => (r.kind === 'family' ? `family:${r.sci}` : r.e.species_code)}
         contentContainerStyle={{ paddingBottom: bottomPad }}
         stickyHeaderIndices={[0]}
+        initialNumToRender={10}
+        windowSize={7}
         ListHeaderComponent={
-          <View style={{ backgroundColor: colors.bg }}>
-            <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm, gap: 2 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm }}>
-                <CountUp value={entries.length} style={{ fontSize: 64, lineHeight: 68, letterSpacing: -2 }} />
-                <Text style={{ fontFamily: fonts.displayItalic, fontSize: 22, color: colors.textMuted, paddingBottom: 10 }}>species</Text>
-              </View>
-              <Text muted>
-                {year ? `Seen in ${year}` : 'All time'}
-                {place ? ` · ${place}` : ''}
-                {unfiltered && entries.length ? ` · ${lifersThisYear} new in ${thisYear}` : ''}
-              </Text>
-              {latest ? (
-                <Text variant="caption" faint>
-                  Latest lifer: {speciesByCode(latest.species_code)?.common} · {relativeTime(latest.first_seen)}
-                </Text>
-              ) : null}
-            </View>
-            <Filters years={years} places={places} year={year} place={place} onYear={setYear} onPlace={setPlace} />
-            <Row style={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.sm }}>
-              <Chip label="Newest first" active={order === 'newest'} onPress={() => setOrder('newest')} />
-              <Chip label="Field guide order" active={order === 'guide'} onPress={() => setOrder('guide')} />
+          <View style={{ backgroundColor: colors.bg, paddingBottom: spacing.sm }}>
+            <Row style={{ justifyContent: 'space-between', paddingHorizontal: spacing.lg, paddingTop: spacing.xs, height: 44 }}>
+              <Segmented options={[{ value: 'newest', label: 'Newest' }, { value: 'guide', label: 'By family' }]} value={order} onChange={setOrder} />
+              <IconButton name={unfiltered ? 'funnel-outline' : 'funnel'} label="Filter" color={unfiltered ? colors.text : colors.accent} onPress={openFilter} />
             </Row>
+            <Text variant="caption" muted style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.xs }}>
+              {plural(entries.length, 'species', 'species')}
+              {year ? ` · ${year}` : ''}
+              {place ? ` · ${place}` : ''}
+              {unfiltered && lifersThisYear ? ` · ${lifersThisYear} new this year` : ''}
+            </Text>
           </View>
         }
-        renderItem={({ item: row, index }) => {
+        renderItem={({ item: row }) => {
           if (row.kind === 'family') {
             return (
-              <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.lg, paddingBottom: spacing.xs }}>
-                <Text variant="label" muted>
+              <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.lg, paddingBottom: 6 }}>
+                <Text variant="caption" muted style={{ textTransform: 'uppercase', letterSpacing: 0.6 }}>
                   {row.family}
-                </Text>
-                <Text variant="caption" faint style={{ fontFamily: fonts.displayItalic }}>
-                  {row.sci}
                 </Text>
               </View>
             );
@@ -100,32 +108,33 @@ export default function LifeListScreen() {
           const item = row.e;
           const sp = speciesByCode(item.species_code);
           return (
-            <Rise index={index}>
-            <Link href={{ pathname: '/species/[code]', params: { code: item.species_code } }} asChild>
-              <Pressable style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.lg, paddingVertical: 10, backgroundColor: pressed ? colors.surfaceAlt : 'transparent' })}>
-                <Text variant="caption" faint style={{ width: 28, textAlign: 'right' }}>
+            <Pressable onPress={() => open(item.species_code)} accessibilityRole="button" style={({ pressed }) => ({ backgroundColor: pressed ? colors.surfaceAlt : 'transparent' })}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.lg, paddingVertical: 8 }}>
+                <Text variant="caption" muted style={{ width: 30, textAlign: 'right', fontVariant: ['tabular-nums'] }}>
                   {rank.get(item.species_code)}
                 </Text>
                 <Photo
                   path={item.photo}
-                  style={{ width: 52, height: 52, borderRadius: radius.md }}
+                  style={{ width: 84, height: 63, borderRadius: 8 }}
                   fallback={
-                    <View style={{ width: 52, height: 52, borderRadius: radius.md, backgroundColor: colors.accentSoft, alignItems: 'center', justifyContent: 'center' }}>
-                      <Text style={{ color: colors.accent, fontFamily: fonts.displaySemi }}>{sp?.common.charAt(0)}</Text>
+                    <View style={{ width: 84, height: 63, borderRadius: 8, backgroundColor: colors.surfaceAlt, alignItems: 'center', justifyContent: 'center' }}>
+                      <Ionicons name="leaf-outline" size={20} color={colors.textFaint} />
                     </View>
                   }
                 />
-                <View style={{ flex: 1 }}>
+                <View style={{ flex: 1, gap: 2 }}>
                   <Text variant="species" numberOfLines={1}>
                     {sp?.common ?? item.species_code}
                   </Text>
                   <Text variant="caption" muted numberOfLines={1}>
-                    First {formatDate(item.first_seen)} · {item.sighting_count}×
+                    {formatDate(item.first_seen)}
+                    {item.sighting_count > 1 ? ` · seen ${item.sighting_count} times` : ''}
                   </Text>
                 </View>
-              </Pressable>
-            </Link>
-            </Rise>
+                <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
+              </View>
+              <View style={{ height: 0.5, backgroundColor: colors.border, marginLeft: spacing.lg + 30 + spacing.md + 84 + spacing.md }} />
+            </Pressable>
           );
         }}
         ListEmptyComponent={

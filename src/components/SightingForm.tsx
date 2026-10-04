@@ -3,7 +3,7 @@ import * as Crypto from 'expo-crypto';
 import { Directory, File, Paths } from 'expo-file-system';
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import Animated, { FadeInDown, FadeInUp, useReducedMotion } from 'react-native-reanimated';
+import Animated, { FadeInUp, useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DateTimeField } from '@/components/DateTimeField';
@@ -149,34 +149,62 @@ export function SightingForm({ userId, existing, onSaved, resetKey, autoOpenPick
     }
   };
 
-  // The bird is the title. The key remounts the block when the species changes so the new name rises in.
+  // eBird's entry screen: a search field, then the birds you log most, one tap each.
+  const recentRows = recent.slice(0, 6).map((c) => speciesByCode(c)).filter((x): x is SpeciesEntry => !!x);
   const headline = (
-    <Pressable accessibilityRole="button" accessibilityLabel={species ? `Species: ${species.common}. Change` : 'Choose species'} onPress={() => setPickerOpen(true)}>
-      <Animated.View key={species?.code ?? 'none'} entering={reduced ? undefined : FadeInDown.springify().damping(18).stiffness(200)} style={{ gap: spacing.xs }}>
-        {species ? (
-          <>
-            <Text variant="display" style={{ fontSize: 38, lineHeight: 42 }} numberOfLines={2}>
+    <View style={{ gap: spacing.md }}>
+      {species ? (
+        <Pressable accessibilityRole="button" accessibilityLabel={`Species: ${species.common}. Change`} onPress={() => setPickerOpen(true)} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text variant="title" numberOfLines={2}>
               {species.common}
             </Text>
-            <Text style={{ fontFamily: fonts.displayItalic, fontSize: 17, color: colors.textMuted }}>{species.sci}</Text>
-            <Row style={{ marginTop: spacing.xs }}>
-              <Chip label="Change" icon="swap-horizontal" onPress={() => setPickerOpen(true)} />
-            </Row>
-          </>
-        ) : (
-          <>
-            <Text variant="display" style={{ fontSize: 38, lineHeight: 42, color: colors.text }}>
-              Which bird?
+            <Text style={{ fontFamily: fonts.displayItalic, fontSize: 16, color: colors.textMuted }}>{species.sci}</Text>
+          </View>
+          <Text variant="label" style={{ color: colors.accent }}>
+            Change
+          </Text>
+        </Pressable>
+      ) : (
+        <>
+          <Pressable
+            accessibilityRole="search"
+            onPress={() => setPickerOpen(true)}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.surfaceAlt, borderRadius: 10, paddingHorizontal: spacing.md, height: 40 }}
+          >
+            <Ionicons name="search" size={18} color={colors.textFaint} />
+            <Text muted style={{ fontSize: 17 }}>
+              Search birds
             </Text>
-            <View style={{ width: 56, height: 2, backgroundColor: colors.accent, marginTop: spacing.xs }} />
-            <Row gap={6}>
-              <Ionicons name="search" size={16} color={colors.textMuted} />
-              <Text muted>Tap to search 11,000 species.</Text>
-            </Row>
-          </>
-        )}
-      </Animated.View>
-    </Pressable>
+          </Pressable>
+          {recentRows.length ? (
+            <View>
+              <Text variant="caption" muted style={{ textTransform: 'uppercase', letterSpacing: 0.6, paddingBottom: 6, paddingLeft: 4 }}>
+                Your usual birds
+              </Text>
+              <View style={{ backgroundColor: colors.surface, borderRadius: radius.md, overflow: 'hidden', borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border }}>
+                {recentRows.map((r, i) => (
+                  <Pressable key={r.code} onPress={() => setSpecies(r)} accessibilityRole="button" style={({ pressed }) => ({ backgroundColor: pressed ? colors.surfaceAlt : 'transparent' })}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 11, paddingHorizontal: spacing.md, gap: spacing.md }}>
+                      <View style={{ flex: 1 }}>
+                        <Text variant="species" numberOfLines={1}>
+                          {r.common}
+                        </Text>
+                        <Text variant="caption" muted numberOfLines={1}>
+                          {r.family}
+                        </Text>
+                      </View>
+                      <Ionicons name="add-circle-outline" size={24} color={colors.accent} />
+                    </View>
+                    {i < recentRows.length - 1 ? <View style={{ height: 0.5, backgroundColor: colors.border, marginLeft: spacing.md }} /> : null}
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+          ) : null}
+        </>
+      )}
+    </View>
   );
 
   const fields = (
