@@ -3,6 +3,7 @@ import React from 'react';
 import { View } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 
+import { sizedUri } from '@/lib/imageSize';
 import { usePhotoUrl } from '@/lib/photos';
 import { useTheme } from '@/lib/theme';
 
@@ -24,5 +25,6 @@ export function Photo({ path, localUri, fallback, style, ...rest }: Props) {
   if (!path && !localUri) return <>{fallback ?? null}</>;
   if (!uri) return <View style={[{ backgroundColor: colors.surfaceAlt }, style]} />;
   // The cross-fade is skipped under Reduce Motion; callers can still override via rest.
-  return <Image source={{ uri }} style={[{ backgroundColor: colors.surfaceAlt }, style]} contentFit="cover" transition={reduced ? 0 : 150} {...rest} />;
+  const src = sizedUri(uri);
+  return <Image source={{ uri: src }} recyclingKey={src} cachePolicy="memory-disk" style={[{ backgroundColor: colors.surfaceAlt }, style]} contentFit="cover" transition={reduced ? 0 : 150} {...rest} />;
 }

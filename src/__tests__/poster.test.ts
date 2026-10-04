@@ -1,3 +1,4 @@
+import { sizedUri } from '@/lib/imageSize';
 import { posterFor, posterGradients } from '@/lib/theme';
 
 // theme.ts re-exports the app fonts; expo-font pulls in native asset loading that jest cannot resolve.
@@ -56,5 +57,13 @@ describe('posterFor', () => {
 
   it('uses a different pair in dark mode', () => {
     for (const family of FAMILIES) expect(posterFor(family, true)).not.toEqual(posterFor(family, false));
+  });
+});
+
+
+describe('sizedUri', () => {
+  it('asks Unsplash for a smaller image and leaves other URLs alone', () => {
+    expect(sizedUri('https://images.unsplash.com/photo-1?w=1080&q=80')).toBe('https://images.unsplash.com/photo-1?w=720&q=80');
+    expect(sizedUri('https://x.supabase.co/storage/v1/sign/a.jpg?token=1')).toBe('https://x.supabase.co/storage/v1/sign/a.jpg?token=1');
   });
 });

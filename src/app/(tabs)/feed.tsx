@@ -112,6 +112,10 @@ export default function FeedScreen() {
         keyExtractor={(i) => `${i.kind}:${i.payload.id}`}
         contentContainerStyle={{ padding: spacing.lg, gap: spacing.lg, paddingBottom: bottomPad }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.accent} />}
+        initialNumToRender={4}
+        maxToRenderPerBatch={4}
+        windowSize={7}
+        removeClippedSubviews
         onEndReached={more}
         onEndReachedThreshold={0.6}
         renderItem={({ item, index }) =>

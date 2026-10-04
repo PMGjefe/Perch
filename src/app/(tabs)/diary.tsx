@@ -122,6 +122,10 @@ export default function DiaryScreen() {
         data={rows}
         keyExtractor={(r) => (r.kind === 'outing' ? r.outing.key : r.s.id)}
         stickyHeaderIndices={[0]}
+        initialNumToRender={4}
+        maxToRenderPerBatch={4}
+        windowSize={7}
+        removeClippedSubviews
         ListHeaderComponent={header}
         contentContainerStyle={{ paddingBottom: bottomPad }}
         renderItem={({ item, index }) =>
