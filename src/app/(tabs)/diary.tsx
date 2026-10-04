@@ -1,22 +1,21 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
-import { AppState, FlatList, Pressable, StyleSheet, View } from 'react-native';
+import { ActionSheetIOS, Alert, AppState, FlatList, Platform, StyleSheet, View } from 'react-native';
 
-import { Filters } from '@/components/Filters';
-import { SightingCard } from '@/components/SightingCard';
+import { Segmented } from '@/components/Segmented';
+import { SightingRow } from '@/components/SightingRow';
 import { SightingsMap } from '@/components/SightingsMap';
 import { SyncDot } from '@/components/SyncDot';
 import { useBottomPadding } from '@/components/TabBarInset';
-import { Button, Chip, Empty, Row, Text } from '@/components/ui';
+import { Button, Empty, IconButton, Row, Text } from '@/components/ui';
 import { useLocalQuery, useLocalSightings } from '@/hooks/useLocalSightings';
 import { useAuth, useUserId } from '@/lib/auth';
 import * as db from '@/lib/db';
 import { haversineM } from '@/lib/geo';
 import { groupOutings, outingLine } from '@/lib/insights';
-import { speciesByCode } from '@/lib/taxonomy';
 import { usePrefetchPhotoUrls } from '@/lib/photos';
-import { formatDay, formatLongDay, plural } from '@/lib/format';
+import { formatDay, plural } from '@/lib/format';
 import { radius, spacing, useTheme } from '@/lib/theme';
 
 export default function DiaryScreen() {
@@ -37,7 +36,6 @@ export default function DiaryScreen() {
   const firstSeen = useMemo(() => new Map(life.map((e) => [e.species_code, e.first_sighting_id])), [life]);
   // Outings: same day, same patch. Rows are flattened so one FlatList still virtualises everything.
   const outings = useMemo(() => groupOutings(sightings, firstSeen), [sightings, firstSeen]);
-  const rows = useMemo(() => outings.flatMap((o) => [{ kind: 'outing' as const, outing: o }, ...o.sightings.map((s) => ({ kind: 'sighting' as const, s, key: s.id }))]), [outings]);
   usePrefetchPhotoUrls(sightings.filter((s) => !s.local_photo_uri).map((s) => s.photo_path));
 
   // Preview how others see pins near home.
@@ -51,51 +49,53 @@ export default function DiaryScreen() {
   const memories = useLocalQuery(() => db.onThisDay(userId, today.slice(5), today.slice(0, 4)), [userId, today]);
   const line = filtered ? null : outingLine(outings[0], now);
 
+  // Native-style filter menu: one button, an action sheet, no row of pills.
+  const choose = (title: string, options: string[], onPick: (i: number) => void) => {
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions({ title, options: [...options, 'Cancel'], cancelButtonIndex: options.length }, (i) => {
+        if (i < options.length) onPick(i);
+      });
+    } else {
+      Alert.alert(title, undefined, [...options.map((o, i) => ({ text: o, onPress: () => onPick(i) })), { text: 'Cancel', style: 'cancel' as const }]);
+    }
+  };
+  const openFilter = () => {
+    const items = [withPhoto ? 'Show all sightings' : 'Only with photos', 'By year', 'By place', ...(filtered ? ['Clear filters'] : [])];
+    choose('Filter', items, (i) => {
+      if (i === 0) setWithPhoto(!withPhoto);
+      else if (i === 1) choose('Year', years.map(String), (j) => setYear(years[j]));
+      else if (i === 2) choose('Place', places.slice(0, 20), (j) => setPlace(places[j]));
+      else {
+        setYear(null);
+        setPlace(null);
+        setWithPhoto(false);
+      }
+    });
+  };
+  const summary = filtered
+    ? [withPhoto ? 'with photos' : null, year ? String(year) : null, place].filter(Boolean).join(' · ')
+    : null;
+
   const header = (
-    <View style={{ backgroundColor: colors.bg }}>
-      <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm, gap: 2 }}>
-        {/* The date owns the full width: "Wednesday 30 September" is 383pt in Fraunces at 32pt, wider than any
-            iPhone's content area, so the longest few days of the year shrink a touch instead of wrapping. The type
-            multiplier is capped so a shrink is always enough and the date never truncates under large text. */}
-        <Text variant="title" accessibilityRole="header" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} maxFontSizeMultiplier={1.2}>
-          {formatLongDay(now)}
-        </Text>
-        <Row style={{ justifyContent: 'space-between' }}>
-          <View style={{ flex: 1, gap: 2 }}>
-            <Text muted>{`${plural(sightings.length, 'sighting')}${year ? ` in ${year}` : ''}${place ? ` at ${place}` : ''}`}</Text>
-            {line ? (
-              <Text variant="caption" faint>
-                {line}
-              </Text>
-            ) : null}
-          </View>
-          {/* Fixed at the SyncDot's height so the chips hold still when a backup starts. */}
-          <Row style={{ height: 44 }}>
-            <SyncDot />
-            <Chip label="List" icon="list" active={mode === 'list'} onPress={() => setMode('list')} />
-            <Chip label="Map" icon="map" active={mode === 'map'} onPress={() => setMode('map')} />
-          </Row>
+    <View style={{ backgroundColor: colors.bg, paddingBottom: spacing.sm }}>
+      <Row style={{ justifyContent: 'space-between', paddingHorizontal: spacing.lg, paddingTop: spacing.xs, height: 44 }}>
+        <Segmented options={[{ value: 'list', label: 'List' }, { value: 'map', label: 'Map' }]} value={mode} onChange={setMode} />
+        <Row gap={spacing.xs}>
+          <SyncDot />
+          <IconButton name={filtered ? 'funnel' : 'funnel-outline'} label="Filter" color={filtered ? colors.accent : colors.text} onPress={openFilter} />
         </Row>
-      </View>
-      <Filters years={years} places={places} year={year} place={place} onYear={setYear} onPlace={setPlace} withPhoto={withPhoto} onWithPhoto={setWithPhoto} />
-      {!filtered && memories.length ? (
-        <View style={{ marginHorizontal: spacing.lg, marginTop: spacing.xs, padding: spacing.md, borderRadius: radius.lg, backgroundColor: colors.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border, gap: spacing.xs }}>
-          <Text variant="label" muted>
-            On this day
+      </Row>
+      <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.xs }}>
+        <Text variant="caption" muted>
+          {plural(sightings.length, 'sighting')}
+          {summary ? ` · ${summary}` : ''}
+        </Text>
+        {line ? (
+          <Text variant="caption" faint>
+            {line}
           </Text>
-          {memories.slice(0, 3).map((m) => (
-            <Pressable key={m.id} onPress={() => router.push({ pathname: '/sighting/[id]', params: { id: m.id } })} style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1, flexDirection: 'row', gap: spacing.sm, alignItems: 'baseline' })}>
-              <Text variant="caption" muted style={{ width: 36 }}>
-                {db.localDay(m.observed_at).slice(0, 4)}
-              </Text>
-              <Text variant="species" numberOfLines={1} style={{ flex: 1 }}>
-                {speciesByCode(m.species_code)?.common ?? m.species_code}
-                {m.place_name ? <Text variant="caption" muted>{`  ${m.place_name}`}</Text> : null}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-      ) : null}
+        ) : null}
+      </View>
     </View>
   );
 
@@ -116,44 +116,65 @@ export default function DiaryScreen() {
     );
   }
 
+  const open = (id: string) => router.push({ pathname: '/sighting/[id]', params: { id } });
+  const group = (children: React.ReactNode) => (
+    <View style={{ marginHorizontal: spacing.lg, backgroundColor: colors.surface, borderRadius: radius.md, overflow: 'hidden', borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border }}>{children}</View>
+  );
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <FlatList
-        data={rows}
-        keyExtractor={(r) => (r.kind === 'outing' ? r.outing.key : r.s.id)}
-        stickyHeaderIndices={[0]}
+        data={outings}
+        keyExtractor={(o) => o.key}
         initialNumToRender={4}
         maxToRenderPerBatch={4}
         windowSize={7}
         removeClippedSubviews
-        ListHeaderComponent={header}
+        ListHeaderComponent={
+          <View>
+            {header}
+            {!filtered && memories.length ? (
+              <View style={{ paddingTop: spacing.md }}>
+                <Text variant="caption" muted style={{ paddingHorizontal: spacing.lg + 4, paddingBottom: 6, textTransform: 'uppercase', letterSpacing: 0.6 }}>
+                  On this day
+                </Text>
+                {group(
+                  memories.slice(0, 3).map((m, i, arr) => (
+                    <SightingRow key={m.id} sighting={m} last={i === arr.length - 1} onPress={() => open(m.id)} />
+                  )),
+                )}
+              </View>
+            ) : null}
+          </View>
+        }
         contentContainerStyle={{ paddingBottom: bottomPad }}
-        renderItem={({ item, index }) =>
-          item.kind === 'outing' ? (
-            <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.lg, paddingBottom: spacing.xs, gap: 2 }}>
-              <Text variant="label" muted>
-                {formatDay(item.outing.sightings[0].observed_at)}
-                {item.outing.place ? ` · ${item.outing.place}` : ''}
+        renderItem={({ item: o }) => (
+          <View style={{ paddingTop: spacing.lg }}>
+            <Row style={{ justifyContent: 'space-between', paddingHorizontal: spacing.lg + 4, paddingBottom: 6 }}>
+              <Text variant="caption" muted style={{ textTransform: 'uppercase', letterSpacing: 0.6, flex: 1 }} numberOfLines={1}>
+                {formatDay(o.sightings[0].observed_at)}
+                {o.place ? ` · ${o.place}` : ''}
               </Text>
-              {item.outing.sightings.length > 1 ? (
+              {o.sightings.length > 1 ? (
                 <Text variant="caption" faint>
-                  {item.outing.speciesCount} species
-                  {item.outing.lifers ? ` · ${item.outing.lifers} lifer${item.outing.lifers === 1 ? '' : 's'}` : ''}
+                  {o.speciesCount} species
+                  {o.lifers ? ` · ${o.lifers} lifer${o.lifers === 1 ? '' : 's'}` : ''}
                 </Text>
               ) : null}
-            </View>
-          ) : (
-            <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm }}>
-              <SightingCard index={index} sighting={item.s} compact pending={!!item.s.dirty} />
-            </View>
-          )
-        }
+            </Row>
+            {group(
+              o.sightings.map((s, i) => (
+                <SightingRow key={s.id} sighting={s} lifer={firstSeen.get(s.species_code) === s.id} last={i === o.sightings.length - 1} onPress={() => open(s.id)} />
+              )),
+            )}
+          </View>
+        )}
         ListEmptyComponent={
           <Empty
             icon="book-outline"
-            title={year || place ? 'Nothing matches' : 'Your diary starts here'}
-            body={year || place ? 'Try a different filter.' : 'Every bird you log lands on this page, grouped by outing.'}
-            action={year || place ? undefined : <Button title="Log your first bird" icon="add" onPress={() => router.push('/(tabs)/log')} />}
+            title={filtered ? 'Nothing matches' : 'Your diary starts here'}
+            body={filtered ? 'Try a different filter.' : 'Every bird you log lands on this page, grouped by outing.'}
+            action={filtered ? undefined : <Button title="Log your first bird" icon="add" onPress={() => router.push('/(tabs)/log')} />}
           />
         }
       />
