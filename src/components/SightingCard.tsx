@@ -9,7 +9,7 @@ import { Photo } from '@/components/Photo';
 import { Avatar, Row, Text } from '@/components/ui';
 import { formatDate } from '@/lib/format';
 import { speciesByCode } from '@/lib/taxonomy';
-import { fonts, posterFor, radius, spacing, useTheme } from '@/lib/theme';
+import { fonts, radius, spacing, useTheme } from '@/lib/theme';
 import type { Engagement, PublicProfile, PublicSighting, Sighting } from '@/types/db';
 
 interface Props {
@@ -118,30 +118,22 @@ export function SightingCard({ sighting, profile, engagement, onLike, compact, p
 }
 
 /**
- * Typographic poster for a sighting without a photo: the name set in the italic serif on a
- * warm gradient keyed to the family, so related birds share a hue. Fills its parent.
+ * Plain card for a sighting without a photo: the name in the serif on a quiet surface, with the
+ * family underneath, like an entry in a field guide. Fills its parent.
  */
 export function SpeciesPoster({ name, family, compact, topInset = 0 }: { name: string; family?: string; compact?: boolean; topInset?: number }) {
-  const { colors, dark } = useTheme();
+  const { colors } = useTheme();
   return (
-    <LinearGradient
-      colors={posterFor(family, dark)}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={{ width: '100%', height: '100%', padding: spacing.md, paddingTop: spacing.md + topInset, justifyContent: 'flex-start' }}
-    >
-      <Text
-        style={{ fontFamily: fonts.displayItalic, fontSize: compact ? 26 : 40, lineHeight: compact ? 30 : 44, letterSpacing: -0.5, color: colors.accent }}
-        numberOfLines={compact ? 2 : 3}
-      >
+    <View style={{ width: '100%', height: '100%', padding: spacing.md, paddingTop: spacing.md + topInset, justifyContent: 'flex-start', backgroundColor: colors.surfaceAlt }}>
+      <Text style={{ fontFamily: fonts.display, fontSize: compact ? 24 : 32, lineHeight: compact ? 28 : 36, letterSpacing: -0.4, color: colors.text }} numberOfLines={compact ? 2 : 3}>
         {name}
       </Text>
       {family ? (
-        <Text variant="caption" style={{ color: dark ? 'rgba(242,236,226,0.7)' : colors.textMuted, marginTop: 2 }} numberOfLines={1}>
+        <Text variant="caption" muted style={{ marginTop: 2 }} numberOfLines={1}>
           {family}
         </Text>
       ) : null}
-    </LinearGradient>
+    </View>
   );
 }
 

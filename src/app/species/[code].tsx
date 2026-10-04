@@ -1,6 +1,6 @@
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Link, Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useMemo } from 'react';
-import { FlatList, View } from 'react-native';
+import { FlatList, Pressable, View } from 'react-native';
 
 import { Rise } from '@/components/motion';
 import { SightingCard } from '@/components/SightingCard';
@@ -30,6 +30,14 @@ export default function SpeciesScreen() {
   const places = useMemo(() => new Set(sightings.map((s) => s.place_name).filter(Boolean)).size, [sightings]);
   const withPins = sightings.filter((s) => s.lat != null);
   const months = useMemo(() => monthHistogram(sightings), [sightings]);
+  // Other species of the same family on the life list, in taxonomic order.
+  const related = useMemo(() => {
+    if (!sp) return [];
+    return life
+      .map((e) => speciesByCode(e.species_code))
+      .filter((s): s is NonNullable<typeof s> => !!s && s.code !== sp.code && s.familySci === sp.familySci)
+      .sort((a, b) => a.order - b.order);
+  }, [life, sp]);
   const maxMonth = Math.max(1, ...months);
 
   return (
@@ -43,16 +51,18 @@ export default function SpeciesScreen() {
           <View style={{ gap: spacing.lg, marginBottom: spacing.sm }}>
             <Rise>
               <View style={{ gap: 2 }}>
-                {first ? (
-                  <Text style={{ fontFamily: fonts.semibold, fontSize: 12, letterSpacing: 2.5, color: colors.accent }}>LIFER #{rank}</Text>
-                ) : null}
                 <Text variant="display" style={{ fontSize: 38, lineHeight: 42 }}>
                   {sp?.common ?? code}
                 </Text>
                 <Text style={{ fontFamily: fonts.displayItalic, fontSize: 18, color: colors.textMuted }}>{sp?.sci}</Text>
                 <Text variant="caption" muted>
-                  {sp?.family}
+                  {sp ? `${sp.family} · ${sp.familySci}` : ''}
                 </Text>
+                {first ? (
+                  <Text variant="caption" muted>
+                    No. {rank} on your life list
+                  </Text>
+                ) : null}
               </View>
             </Rise>
             {first ? (
@@ -90,9 +100,26 @@ export default function SpeciesScreen() {
                 </View>
               </Rise>
             ) : null}
+            {related.length ? (
+              <View style={{ gap: spacing.xs }}>
+                <Text variant="label" muted>
+                  Also on your list in this family
+                </Text>
+                {related.map((r) => (
+                  <Link key={r.code} href={{ pathname: '/species/[code]', params: { code: r.code } }} asChild>
+                    <Pressable style={({ pressed }) => ({ paddingVertical: 6, opacity: pressed ? 0.7 : 1 })}>
+                      <Text variant="species">{r.common}</Text>
+                      <Text variant="caption" muted style={{ fontFamily: fonts.displayItalic }}>
+                        {r.sci}
+                      </Text>
+                    </Pressable>
+                  </Link>
+                ))}
+              </View>
+            ) : null}
             {sightings.length ? (
               <Text variant="label" muted>
-                Every time
+                Every sighting
               </Text>
             ) : null}
           </View>

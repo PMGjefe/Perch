@@ -13,7 +13,7 @@ import { useLocalQuery, useLocalSightings } from '@/hooks/useLocalSightings';
 import { useAuth, useUserId } from '@/lib/auth';
 import * as db from '@/lib/db';
 import { haversineM } from '@/lib/geo';
-import { greeting, groupOutings, outingLine } from '@/lib/insights';
+import { groupOutings, outingLine } from '@/lib/insights';
 import { usePrefetchPhotoUrls } from '@/lib/photos';
 import { formatDay, formatLongDay, plural } from '@/lib/format';
 import { spacing, useTheme } from '@/lib/theme';
@@ -42,7 +42,7 @@ export default function DiaryScreen() {
   const home = profile?.hide_home && profile.home_lat != null && profile.home_lng != null ? { lat: profile.home_lat, lng: profile.home_lng } : null;
   const fuzzPreview = (s: { lat: number | null; lng: number | null }) => !!home && s.lat != null && s.lng != null && haversineM({ lat: s.lat, lng: s.lng }, home) <= 500;
 
-  // Masthead: today's date, a light-aware greeting, and where you last were. Filters swap the greeting for the count.
+  // Masthead: today's date, the count, and where you last were.
   const now = useMastheadClock();
   const filtered = year != null || place != null;
   const line = filtered ? null : outingLine(outings[0], now);
@@ -58,7 +58,7 @@ export default function DiaryScreen() {
         </Text>
         <Row style={{ justifyContent: 'space-between' }}>
           <View style={{ flex: 1, gap: 2 }}>
-            <Text muted>{filtered ? `${plural(sightings.length, 'sighting')}${year ? ` in ${year}` : ''}${place ? ` at ${place}` : ''}` : greeting(now)}</Text>
+            <Text muted>{`${plural(sightings.length, 'sighting')}${year ? ` in ${year}` : ''}${place ? ` at ${place}` : ''}`}</Text>
             {line ? (
               <Text variant="caption" faint>
                 {line}

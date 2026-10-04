@@ -7,20 +7,7 @@ import { SightingForm } from '@/components/SightingForm';
 import { Screen, Text } from '@/components/ui';
 import { useAuth, useUserId } from '@/lib/auth';
 import * as db from '@/lib/db';
-import { daylight } from '@/lib/insights';
 import { speciesByCode } from '@/lib/taxonomy';
-import { fonts, useTheme } from '@/lib/theme';
-
-/** Light-aware one-liner. Dawn and dusk are when birders are out; say so. */
-function greeting(): string {
-  const now = new Date();
-  const d = daylight(now);
-  const h = now.getHours();
-  if (d === 0) return h < 5 ? 'Owls, nightjars, and the first chorus soon.' : 'Nocturnal flight calls count too.';
-  if (d < 1 && h < 12) return 'Dawn chorus hours.';
-  if (d < 1) return 'Golden hour. Roost flights and late songs.';
-  return 'What did you see?';
-}
 
 /** A brand-new account cannot have server rows this device has not seen yet. */
 const FRESH_ACCOUNT_WINDOW_MS = 24 * 60 * 60 * 1000;
@@ -29,7 +16,6 @@ export default function LogScreen() {
   const userId = useUserId();
   const { profile, session } = useAuth();
   const router = useRouter();
-  const { colors } = useTheme();
   // The welcome screen sends `pick=1` so the species picker opens straight away.
   const { pick } = useLocalSearchParams<{ pick?: string }>();
   const [resetKey, setResetKey] = useState(0);
@@ -46,10 +32,12 @@ export default function LogScreen() {
     }, []),
   );
 
-  // One eyebrow line above the headline; the bird's name is the title.
+  // A plain label above the headline; the bird's name is the title.
   const header = (
     <View>
-      <Text style={{ fontFamily: fonts.semibold, fontSize: 12, letterSpacing: 2.5, color: colors.accent }}>{greeting().toUpperCase()}</Text>
+      <Text variant="caption" muted>
+        New sighting
+      </Text>
     </View>
   );
 
